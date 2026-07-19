@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { obtenerClaimsDeSesion } from "../../presentation/session";
 import { construirMenuNavegacion } from "../../presentation/nav-sections";
 import { SidebarNav } from "../../presentation/components/sidebar-nav";
+import { LogoutButton } from "../../presentation/components/logout-button";
 
 export default async function ProtectedLayout({
   children,
@@ -29,7 +30,8 @@ export default async function ProtectedLayout({
         </div>
         <SidebarNav menu={menu} />
         <div className="mt-auto pt-6 border-t border-foreground/10">
-          <p className="text-xs text-foreground/40 truncate capitalize">{claims.role.replace(/_/g, " ")}</p>
+          <p className="text-xs text-foreground/40 truncate capitalize mb-2">{claims.role.replace(/_/g, " ")}</p>
+          <LogoutButton />
         </div>
       </aside>
 

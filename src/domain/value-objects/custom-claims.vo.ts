@@ -32,4 +32,5 @@ export interface CustomClaims {
   iglesiaId?: string;
   distritoId?: string;
   asociacionId?: string;
+  unidadId?: string;
 }

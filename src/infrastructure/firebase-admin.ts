@@ -118,5 +118,9 @@ export async function verificarIdToken(idToken: string): Promise<CustomClaims> {
       typeof decodedToken.asociacionId === "string"
         ? decodedToken.asociacionId
         : undefined,
+    unidadId:
+      typeof decodedToken.unidadId === "string"
+        ? decodedToken.unidadId
+        : undefined,
   };
 }

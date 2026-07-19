@@ -9,13 +9,14 @@ interface ModalFormProps {
   readonly trigger: ReactNode;
   readonly children: ReactNode;
   readonly action: (formData: FormData) => void;
+  readonly wide?: boolean;
 }
 
 /**
  * Modal dialog reutilizable basado en <dialog> nativo.
  * Se cierra automáticamente al completar la action y muestra loading.
  */
-export function ModalForm({ id, title, trigger, children, action }: ModalFormProps) {
+export function ModalForm({ id, title, trigger, children, action, wide }: ModalFormProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   async function handleAction(formData: FormData) {
@@ -29,7 +30,7 @@ export function ModalForm({ id, title, trigger, children, action }: ModalFormPro
       <dialog
         ref={dialogRef}
         id={id}
-        className="backdrop:bg-black/50 bg-background text-foreground rounded-xl border border-foreground/10 p-0 w-full max-w-md shadow-xl fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
+        className={`backdrop:bg-black/50 bg-background text-foreground rounded-xl border border-foreground/10 p-0 w-full shadow-xl fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 ${wide ? "max-w-2xl" : "max-w-md"}`}
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">

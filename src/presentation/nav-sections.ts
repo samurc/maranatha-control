@@ -31,6 +31,7 @@ const METADATA_POR_RECURSO: Readonly<
   registro_sabatico: { etiqueta: "Registro Sabático", href: "/registros" },
   dashboard: { etiqueta: "Dashboard Analítico", href: "/dashboard" },
   auditoria: { etiqueta: "Auditoría", href: "/auditoria" },
+  custom_claims: { etiqueta: "Usuarios", href: "/usuarios" },
 };
 
 /**
@@ -46,12 +47,27 @@ export function construirMenuNavegacion(
   const secciones = visibleNavSections(claims);
   const items: NavMenuItem[] = [];
 
+  // Secretario y Maestro solo ven Participantes y Registro Sabático
+  const restriccionOperativa: ReadonlySet<Resource> | null =
+    claims.role === "secretario" || claims.role === "maestro"
+      ? new Set<Resource>(["participante", "registro_sabatico"])
+      : null;
+
   for (const seccion of secciones) {
+    if (restriccionOperativa && !restriccionOperativa.has(seccion.resource)) {
+      continue;
+    }
     const metadata = METADATA_POR_RECURSO[seccion.resource];
     if (metadata === undefined) {
       continue;
     }
     items.push({ resource: seccion.resource, ...metadata });
+  }
+
+  // "Usuarios" es visible para admin_global y admin_asociacion aunque
+  // custom_claims no tenga operación "leer"/"listar" en PERMISSION_MATRIX
+  if (claims.role === "admin_global" || claims.role === "admin_asociacion") {
+    items.push({ resource: "custom_claims", etiqueta: "Usuarios", href: "/usuarios" });
   }
 
   return items;

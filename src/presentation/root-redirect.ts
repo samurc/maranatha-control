@@ -41,6 +41,10 @@ export function resolverDestinoRaiz(claims: CustomClaims | null): string {
   if (ROLES_ANALITICOS.has(claims.role)) {
     return "/dashboard";
   }
+  // Secretario y Maestro van directo a participantes
+  if (claims.role === "secretario" || claims.role === "maestro") {
+    return "/participantes";
+  }
   const menu = construirMenuNavegacion(claims);
   return menu[0]?.href ?? RUTA_LOGIN;
 }

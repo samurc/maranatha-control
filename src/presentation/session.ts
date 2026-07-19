@@ -74,6 +74,8 @@ export function decodificarClaimsOptimista(
         typeof payload.asociacionId === "string"
           ? payload.asociacionId
           : undefined,
+      unidadId:
+        typeof payload.unidadId === "string" ? payload.unidadId : undefined,
     };
   } catch {
     return null;
