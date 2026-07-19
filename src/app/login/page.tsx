@@ -32,7 +32,14 @@ function mensajeDeErrorLegible(error: unknown): string {
     "code" in error &&
     typeof (error as { code: unknown }).code === "string"
   ) {
-    return "Correo o contraseña incorrectos.";
+    const code = (error as { code: string }).code;
+    if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+      return "Correo o contraseña incorrectos.";
+    }
+    return `Error de autenticación (${code}).`;
+  }
+  if (error instanceof Error) {
+    return `No se pudo iniciar sesión: ${error.message}`;
   }
   return "No se pudo iniciar sesión. Intente nuevamente.";
 }
@@ -59,7 +66,8 @@ function LoginForm(): React.JSX.Element {
         email,
         password
       );
-      const idToken = await credencial.user.getIdToken();
+      // Forzar refresh del token para incluir custom claims actualizados.
+      const idToken = await credencial.user.getIdToken(true);
 
       const respuesta = await fetch("/api/auth/login", {
         method: "POST",
@@ -87,42 +95,83 @@ function LoginForm(): React.JSX.Element {
   }
 
   return (
-    <main aria-label="Iniciar sesión">
-      <h1>Iniciar sesión</h1>
-      <form onSubmit={(evento) => void manejarSubmit(evento)}>
-        <div>
-          <label htmlFor="email">Correo electrónico</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(evento) => setEmail(evento.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Contraseña</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(evento) => setPassword(evento.target.value)}
-          />
-        </div>
-        {error !== null ? (
-          <p role="alert" aria-live="assertive">
-            {error}
+    <main
+      aria-label="Iniciar sesión"
+      className="flex min-h-screen items-center justify-center px-4"
+    >
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Maranatha Control
+          </h1>
+          <p className="mt-2 text-sm text-foreground/60">
+            Inicia sesión para continuar
           </p>
-        ) : null}
-        <button type="submit" disabled={enviando}>
-          {enviando ? "Iniciando sesión..." : "Iniciar sesión"}
-        </button>
-      </form>
+        </div>
+
+        <form
+          onSubmit={(evento) => void manejarSubmit(evento)}
+          className="space-y-5"
+        >
+          <div className="space-y-1.5">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-foreground/80"
+            >
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(evento) => setEmail(evento.target.value)}
+              placeholder="usuario@ejemplo.com"
+              className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-foreground/80"
+            >
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(evento) => setPassword(evento.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+            />
+          </div>
+
+          {error !== null ? (
+            <p
+              role="alert"
+              aria-live="assertive"
+              className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={enviando}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {enviando ? "Iniciando sesión..." : "Iniciar sesión"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

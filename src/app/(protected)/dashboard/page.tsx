@@ -14,10 +14,10 @@ import { SectionGuard } from "../../../presentation/components/section-guard";
 import { DashboardAnalitico } from "../../../presentation/components/dashboard-analitico";
 import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { crearConsultarDashboardUseCase } from "../../../application/use-cases/dashboard/consultar-dashboard.use-case";
-import { FirestoreIglesiaRepository } from "../../../infrastructure/repositories/firestore-iglesia.repository";
-import { FirestoreRegistroSabaticoRepository } from "../../../infrastructure/repositories/firestore-registro-sabatico.repository";
-import { FirestoreUnidadAccionRepository } from "../../../infrastructure/repositories/firestore-unidad-accion.repository";
-import { obtenerFirestoreCliente } from "../../../infrastructure/firestore-client";
+import { AdminIglesiaRepository } from "../../../infrastructure/repositories/admin-iglesia.repository";
+import { AdminRegistroSabaticoRepository } from "../../../infrastructure/repositories/admin-registro-sabatico.repository";
+import { AdminUnidadAccionRepository } from "../../../infrastructure/repositories/admin-unidad-accion.repository";
+import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import { SystemClockAdapter } from "../../../infrastructure/adapters/system-clock.adapter";
 
 const MS_POR_SEMANA = 7 * 24 * 60 * 60 * 1000;
@@ -32,11 +32,11 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
     // este marcador nunca llega a mostrarse (Requirement 15.1, 23.2).
     contenido = <></>;
   } else {
-    const db = obtenerFirestoreCliente();
+    const db = obtenerFirestoreAdmin();
     const consultarDashboard = crearConsultarDashboardUseCase({
-      iglesias: new FirestoreIglesiaRepository(db),
-      registros: new FirestoreRegistroSabaticoRepository(db),
-      unidades: new FirestoreUnidadAccionRepository(db),
+      iglesias: new AdminIglesiaRepository(db),
+      registros: new AdminRegistroSabaticoRepository(db),
+      unidades: new AdminUnidadAccionRepository(db),
     });
 
     const hasta = new SystemClockAdapter().now();

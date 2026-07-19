@@ -13,10 +13,10 @@ import { SectionGuard } from "../../../presentation/components/section-guard";
 import { PanelAlumno } from "../../../presentation/components/panel-alumno";
 import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { crearConsultarMiProgresoUseCase } from "../../../application/use-cases/registro-sabatico/consultar-mi-progreso.use-case";
-import { FirestoreIglesiaRepository } from "../../../infrastructure/repositories/firestore-iglesia.repository";
-import { FirestoreParticipanteRepository } from "../../../infrastructure/repositories/firestore-participante.repository";
-import { FirestoreRegistroSabaticoRepository } from "../../../infrastructure/repositories/firestore-registro-sabatico.repository";
-import { obtenerFirestoreCliente } from "../../../infrastructure/firestore-client";
+import { AdminIglesiaRepository } from "../../../infrastructure/repositories/admin-iglesia.repository";
+import { AdminParticipanteRepository } from "../../../infrastructure/repositories/admin-participante.repository";
+import { AdminRegistroSabaticoRepository } from "../../../infrastructure/repositories/admin-registro-sabatico.repository";
+import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import { SystemClockAdapter } from "../../../infrastructure/adapters/system-clock.adapter";
 
 export default async function PanelAlumnoPage(): Promise<React.JSX.Element> {
@@ -26,11 +26,11 @@ export default async function PanelAlumnoPage(): Promise<React.JSX.Element> {
   if (claims === null) {
     contenido = <></>;
   } else {
-    const db = obtenerFirestoreCliente();
+    const db = obtenerFirestoreAdmin();
     const consultarMiProgreso = crearConsultarMiProgresoUseCase({
-      registros: new FirestoreRegistroSabaticoRepository(db),
-      participantes: new FirestoreParticipanteRepository(db),
-      iglesias: new FirestoreIglesiaRepository(db),
+      registros: new AdminRegistroSabaticoRepository(db),
+      participantes: new AdminParticipanteRepository(db),
+      iglesias: new AdminIglesiaRepository(db),
     });
 
     const fechaReferencia = new SystemClockAdapter().now();

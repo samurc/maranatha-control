@@ -33,17 +33,36 @@ export default async function ProtectedLayout({
   const menu = construirMenuNavegacion(claims);
 
   return (
-    <div className="min-h-full flex flex-col">
-      <nav aria-label="Navegación principal">
-        <ul>
-          {menu.map((item) => (
-            <li key={item.resource}>
-              <Link href={item.href}>{item.etiqueta}</Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="flex-1">{children}</div>
+    <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 border-r border-foreground/10 bg-foreground/[0.02] p-4">
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-foreground">Maranatha</h2>
+          <p className="text-xs text-foreground/50">Control de Escuela Sabática</p>
+        </div>
+        <nav aria-label="Navegación principal">
+          <ul className="space-y-1">
+            {menu.map((item) => (
+              <li key={item.resource}>
+                <Link
+                  href={item.href}
+                  className="block rounded-md px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                >
+                  {item.etiqueta}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="mt-auto pt-6 border-t border-foreground/10 mt-8">
+          <p className="text-xs text-foreground/40 truncate">{claims.role.replace("_", " ")}</p>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto p-6">
+        {children}
+      </main>
     </div>
   );
 }

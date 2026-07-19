@@ -17,11 +17,11 @@ import {
 import type { GridState } from "../../../../../presentation/grilla-asistencia/grid-state";
 import { obtenerClaimsDeSesion } from "../../../../../presentation/session";
 import { calcularSabadoEclesiastico } from "../../../../../domain/services/calcular-sabado-eclesiastico";
-import { FirestoreIglesiaRepository } from "../../../../../infrastructure/repositories/firestore-iglesia.repository";
-import { FirestoreParticipanteRepository } from "../../../../../infrastructure/repositories/firestore-participante.repository";
-import { FirestoreRegistroSabaticoRepository } from "../../../../../infrastructure/repositories/firestore-registro-sabatico.repository";
-import { FirestoreUnidadAccionRepository } from "../../../../../infrastructure/repositories/firestore-unidad-accion.repository";
-import { obtenerFirestoreCliente } from "../../../../../infrastructure/firestore-client";
+import { AdminIglesiaRepository } from "../../../../../infrastructure/repositories/admin-iglesia.repository";
+import { AdminParticipanteRepository } from "../../../../../infrastructure/repositories/admin-participante.repository";
+import { AdminRegistroSabaticoRepository } from "../../../../../infrastructure/repositories/admin-registro-sabatico.repository";
+import { AdminUnidadAccionRepository } from "../../../../../infrastructure/repositories/admin-unidad-accion.repository";
+import { obtenerFirestoreAdmin } from "../../../../../infrastructure/firestore-admin";
 import { SystemClockAdapter } from "../../../../../infrastructure/adapters/system-clock.adapter";
 import { registrarAsistenciaAction } from "./actions";
 
@@ -41,11 +41,11 @@ export default async function RegistroPage({
   if (claims === null) {
     contenido = <></>;
   } else {
-    const db = obtenerFirestoreCliente();
-    const unidades = new FirestoreUnidadAccionRepository(db);
-    const iglesias = new FirestoreIglesiaRepository(db);
-    const participantesRepo = new FirestoreParticipanteRepository(db);
-    const registrosRepo = new FirestoreRegistroSabaticoRepository(db);
+    const db = obtenerFirestoreAdmin();
+    const unidades = new AdminUnidadAccionRepository(db);
+    const iglesias = new AdminIglesiaRepository(db);
+    const participantesRepo = new AdminParticipanteRepository(db);
+    const registrosRepo = new AdminRegistroSabaticoRepository(db);
 
     const unidad = await unidades.findById(unidadId);
     if (unidad === null) {

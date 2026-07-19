@@ -28,6 +28,8 @@ const RUTA_LOGIN = "/login";
 const PREFIJOS_PROTEGIDOS = [
   "/dashboard",
   "/iglesias",
+  "/asociaciones",
+  "/distritos",
   "/unidades",
   "/participantes",
   "/registros",

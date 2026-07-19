@@ -36,38 +36,46 @@ import {
 } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 
-const VARIABLES_CLIENTE = [
-  "NEXT_PUBLIC_FIREBASE_API_KEY",
-  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-  "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  "NEXT_PUBLIC_FIREBASE_APP_ID",
-] as const;
-
 /**
  * Valida cada una de `VARIABLES_CLIENTE` contra `process.env` y retorna la
  * configuración de Firebase ya construida. Lanza `Error` con el nombre
  * exacto de la primera variable faltante/vacía encontrada (Requirement
  * 24.5): nunca retorna una configuración parcialmente construida.
+ *
+ * NOTA: Next.js solo reemplaza accesos DIRECTOS a `process.env.NEXT_PUBLIC_*`
+ * en el bundle del cliente — accesos dinámicos (`process.env[variable]`) NO
+ * se inlinean. Por eso cada variable se lee de forma literal aquí.
  */
 function leerConfigClienteOLanzar(): FirebaseOptions {
-  const valores: Partial<Record<(typeof VARIABLES_CLIENTE)[number], string>> =
-    {};
-  for (const nombre of VARIABLES_CLIENTE) {
-    const valor = process.env[nombre];
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+
+  const entries: [string, string | undefined][] = [
+    ["NEXT_PUBLIC_FIREBASE_API_KEY", apiKey],
+    ["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", authDomain],
+    ["NEXT_PUBLIC_FIREBASE_PROJECT_ID", projectId],
+    ["NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET", storageBucket],
+    ["NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID", messagingSenderId],
+    ["NEXT_PUBLIC_FIREBASE_APP_ID", appId],
+  ];
+
+  for (const [nombre, valor] of entries) {
     if (valor === undefined || valor.length === 0) {
       throw new Error(`Falta la variable de entorno requerida: ${nombre}`);
     }
-    valores[nombre] = valor;
   }
+
   return {
-    apiKey: valores.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: valores.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: valores.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: valores.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: valores.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: valores.NEXT_PUBLIC_FIREBASE_APP_ID,
+    apiKey,
+    authDomain,
+    projectId,
+    storageBucket,
+    messagingSenderId,
+    appId,
   } as FirebaseOptions;
 }
 

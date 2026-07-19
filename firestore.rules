@@ -3,53 +3,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /asociaciones/{docId} {
-      allow create: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == request.resource.data.asociacionId);
-      allow update: if request.auth.token.role == 'admin_global';
-      allow delete: if request.auth.token.role == 'admin_global';
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId);
-    }
-    match /distritos/{docId} {
-      allow create: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == request.resource.data.asociacionId);
-      allow update: if request.auth.token.role == 'admin_global';
-      allow delete: if request.auth.token.role == 'admin_global';
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'pastor_distrital' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'anciano' && request.auth.token.distritoId == resource.data.distritoId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'pastor_distrital' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'anciano' && request.auth.token.distritoId == resource.data.distritoId);
-    }
-    match /iglesias/{docId} {
-      allow create: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == request.resource.data.asociacionId);
-      allow update: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId);
-      allow delete: if request.auth.token.role == 'admin_global';
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'pastor_distrital' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'anciano' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'pastor_distrital' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'anciano' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-    }
-    match /unidades_accion/{docId} {
-      allow create: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == request.resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == request.resource.data.iglesiaId);
-      allow update: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow delete: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'pastor_distrital' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'anciano' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'pastor_distrital' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'anciano' && request.auth.token.distritoId == resource.data.distritoId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-    }
-    match /participantes/{docId} {
-      allow create: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == request.resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == request.resource.data.iglesiaId);
-      allow update: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow delete: if request.auth.token.role == 'admin_global';
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-    }
-    match /registros_sabaticos/{docId} {
-      allow create: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == request.resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == request.resource.data.iglesiaId);
-      allow update: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow delete: if request.auth.token.role == 'admin_global';
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId) || (request.auth.token.role == 'director_es' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'secretario' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'maestro' && request.auth.token.iglesiaId == resource.data.iglesiaId) || (request.auth.token.role == 'alumno' && request.auth.token.iglesiaId == resource.data.iglesiaId);
-    }
-    match /auditoria/{docId} {
-      allow update: if request.auth.token.role == 'admin_global';
-      allow delete: if request.auth.token.role == 'admin_global';
-      allow get: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId);
-      allow list: if request.auth.token.role == 'admin_global' || (request.auth.token.role == 'admin_asociacion' && request.auth.token.asociacionId == resource.data.asociacionId);
+    // Regla temporal de desarrollo: permite lectura/escritura a usuarios autenticados.
+    // TODO: Reemplazar con reglas granulares generadas por PERMISSION_MATRIX cuando
+    // los repositorios de servidor usen firebase-admin (que bypassa reglas).
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
