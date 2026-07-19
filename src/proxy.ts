@@ -35,6 +35,8 @@ const PREFIJOS_PROTEGIDOS = [
   "/registros",
   "/auditoria",
   "/usuarios",
+  "/cumpleanos",
+  "/asistencia",
   "/mi-progreso",
   "/panel-alumno",
 ];

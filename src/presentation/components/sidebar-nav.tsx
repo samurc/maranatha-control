@@ -17,7 +17,7 @@ export function SidebarNav({ menu }: SidebarNavProps) {
         {menu.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <li key={item.resource}>
+            <li key={item.href}>
               <Link
                 href={item.href}
                 className={`block rounded-md px-3 py-2 text-sm transition-colors ${

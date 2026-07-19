@@ -70,5 +70,11 @@ export function construirMenuNavegacion(
     items.push({ resource: "custom_claims", etiqueta: "Usuarios", href: "/usuarios" });
   }
 
+  // "Cumpleaños" y "Asistencia" visible para secretario y maestro
+  if (claims.role === "secretario" || claims.role === "maestro") {
+    items.push({ resource: "datos_personales" as Resource, etiqueta: "Asistencia", href: "/asistencia" });
+    items.push({ resource: "datos_personales" as Resource, etiqueta: "Cumpleaños", href: "/cumpleanos" });
+  }
+
   return items;
 }
