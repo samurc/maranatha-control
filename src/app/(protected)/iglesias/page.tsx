@@ -1,8 +1,8 @@
 import { SectionGuard } from "../../../presentation/components/section-guard";
 import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
-import { ModalForm, FormField } from "../../../presentation/components/modal-form";
 import { DeleteButton } from "../../../presentation/components/delete-button";
+import { CrearIglesiaForm } from "../../../presentation/components/crear-iglesia-form";
 import { crearIglesia, eliminarIglesia } from "./actions";
 
 export default async function IglesiasPage(): Promise<React.JSX.Element> {
@@ -31,34 +31,11 @@ export default async function IglesiasPage(): Promise<React.JSX.Element> {
               Congregaciones locales registradas
             </p>
           </div>
-          <ModalForm
-            id="crear-iglesia"
-            title="Nueva Iglesia"
+          <CrearIglesiaForm
+            asociaciones={asociaciones}
+            distritos={distritos}
             action={crearIglesia}
-            trigger={
-              <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
-                + Nueva
-              </button>
-            }
-          >
-            <FormField label="Nombre" name="nombre" required placeholder="Ej: Iglesia Central" />
-            <FormField label="Código de país" name="paisCodigo" required placeholder="Ej: CL" />
-            <FormField label="Zona horaria (IANA)" name="timezone" placeholder="Ej: America/Santiago" />
-            <div className="space-y-1.5">
-              <label htmlFor="asociacionId" className="block text-sm font-medium text-foreground/80">Asociación</label>
-              <select id="asociacionId" name="asociacionId" required className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-                <option value="">Seleccionar...</option>
-                {asociaciones.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="distritoId" className="block text-sm font-medium text-foreground/80">Distrito</label>
-              <select id="distritoId" name="distritoId" required className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors">
-                <option value="">Seleccionar...</option>
-                {distritos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-              </select>
-            </div>
-          </ModalForm>
+          />
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-foreground/10">
