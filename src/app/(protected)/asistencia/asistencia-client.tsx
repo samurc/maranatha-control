@@ -23,6 +23,7 @@ interface AsistenciaClientProps {
   iglesiaId: string;
   unidadId: string;
   registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number }>>;
+  indicadoresExistentes: Record<string, string>;
 }
 
 const SABADOS = Array.from({ length: 13 }, (_, i) => i + 1);
@@ -49,6 +50,7 @@ export function AsistenciaClient({
   iglesiaId,
   unidadId,
   registrosExistentes,
+  indicadoresExistentes,
 }: AsistenciaClientProps) {
   // Estado: grilla[participanteId][`S${sabado}`] = CeldaValor
   const [grilla, setGrilla] = useState<Record<string, Record<string, CeldaValor>>>(() => {
@@ -68,6 +70,7 @@ export function AsistenciaClient({
 
   const [isPending, startTransition] = useTransition();
   const [guardado, setGuardado] = useState<string | null>(null);
+  const [indicadores, setIndicadores] = useState<Record<string, string>>(indicadoresExistentes);
 
   function actualizarCelda(participanteId: string, sabado: number, valor: CeldaValor) {
     setGrilla((prev) => ({
@@ -82,6 +85,16 @@ export function AsistenciaClient({
     if (valor === "F" || /^P[0-7]$/.test(valor)) {
       guardarSabado(sabado, { ...grilla, [participanteId]: { ...grilla[participanteId], [`S${sabado}`]: valor } });
     }
+  }
+
+  function actualizarIndicador(clave: string, valor: string) {
+    setIndicadores((prev) => ({ ...prev, [clave]: valor }));
+    // Autoguardar indicador
+    const formData = new FormData();
+    formData.set("indicador", JSON.stringify({ iglesiaId, unidadId, anio, trimestre, clave, valor }));
+    startTransition(async () => {
+      await guardarAsistencia(formData);
+    });
   }
 
   function guardarSabado(sabado: number, grillaActual?: typeof grilla) {
@@ -130,7 +143,6 @@ export function AsistenciaClient({
             <tr className="bg-foreground/[0.05]">
               <th className="sticky left-0 bg-foreground/[0.05] px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[40px]">#</th>
               <th className="sticky left-[40px] bg-foreground/[0.05] px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[180px]">Nombre y apellido</th>
-              <th className="sticky left-[220px] bg-foreground/[0.05] px-2 py-2 text-center font-semibold text-foreground/80 border-r border-foreground/10 min-w-[50px]">F. Nac.</th>
               {SABADOS.map((s) => (
                 <th key={s} className="px-1 py-2 text-center font-semibold text-foreground/70 min-w-[42px] border-l border-foreground/5">
                   {s}°
@@ -146,9 +158,6 @@ export function AsistenciaClient({
                 </td>
                 <td className="sticky left-[40px] bg-background px-2 py-1.5 text-foreground font-medium border-r border-foreground/10 whitespace-nowrap">
                   {p.nombre} {p.apellido}
-                </td>
-                <td className="sticky left-[220px] bg-background px-2 py-1.5 text-center text-foreground/50 border-r border-foreground/10">
-                  {p.fechaNacimiento || "—"}
                 </td>
                 {SABADOS.map((s) => {
                   const clave = `S${s}`;
@@ -199,9 +208,8 @@ export function AsistenciaClient({
           {/* Fila de totales */}
           <tfoot>
             <tr className="bg-foreground/[0.03] font-semibold">
-              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-2 border-r border-foreground/10"></td>
-              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-2 text-foreground/70 border-r border-foreground/10">TOTAL</td>
-              <td className="sticky left-[220px] bg-foreground/[0.03] px-2 py-2 border-r border-foreground/10"></td>
+              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">1</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° alumnos presentes</td>
               {SABADOS.map((s) => {
                 const clave = `S${s}`;
                 let presentes = 0;
@@ -210,8 +218,120 @@ export function AsistenciaClient({
                   if (valor.startsWith("P")) presentes++;
                 }
                 return (
-                  <td key={s} className="px-1 py-2 text-center text-foreground/60 border-l border-foreground/5">
+                  <td key={s} className="px-1 py-1.5 text-center text-foreground/60 border-l border-foreground/5 text-xs">
                     {presentes > 0 ? presentes : ""}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.02]">
+              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">2</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° alumnos que estudiaron diariamente la lección</td>
+              {SABADOS.map((s) => {
+                const clave = `S${s}`;
+                let estudiaron = 0;
+                for (const p of participantes) {
+                  const valor = grilla[p.id]?.[clave] ?? "";
+                  if (/^P7$/.test(valor)) estudiaron++;
+                }
+                return (
+                  <td key={s} className="px-1 py-1.5 text-center text-foreground/60 border-l border-foreground/5 text-xs">
+                    {estudiaron > 0 ? estudiaron : ""}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.03]">
+              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">3</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° de discípulos dando estudios bíblicos</td>
+              {SABADOS.map((s) => {
+                const clave = `S${s}`;
+                return (
+                  <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
+                    <input
+                      type="number"
+                      min="0"
+                      data-indicador={`eb-${s}`}
+                      defaultValue={indicadores[`eb-${s}`] ?? ""}
+                      onChange={(e) => actualizarIndicador(`eb-${s}`, e.target.value)}
+                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.02]">
+              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">4</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° personas que recibieron estudios bíblicos</td>
+              {SABADOS.map((s) => {
+                const clave = `S${s}`;
+                return (
+                  <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
+                    <input
+                      type="number"
+                      min="0"
+                      data-indicador={`re-${s}`}
+                      defaultValue={indicadores[`re-${s}`] ?? ""}
+                      onChange={(e) => actualizarIndicador(`re-${s}`, e.target.value)}
+                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.03]">
+              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">5</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que asistieron a G.P.</td>
+              {SABADOS.map((s) => {
+                const clave = `S${s}`;
+                return (
+                  <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
+                    <input
+                      type="number"
+                      min="0"
+                      data-indicador={`gp-${s}`}
+                      defaultValue={indicadores[`gp-${s}`] ?? ""}
+                      onChange={(e) => actualizarIndicador(`gp-${s}`, e.target.value)}
+                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.02]">
+              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">6</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que participaron de los 365 días con el espíritu santo</td>
+              {SABADOS.map((s) => {
+                const clave = `S${s}`;
+                return (
+                  <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
+                    <input
+                      type="number"
+                      min="0"
+                      data-indicador={`ep-${s}`}
+                      defaultValue={indicadores[`ep-${s}`] ?? ""}
+                      onChange={(e) => actualizarIndicador(`ep-${s}`, e.target.value)}
+                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.03]">
+              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">7</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">Ofrenda</td>
+              {SABADOS.map((s) => {
+                const clave = `S${s}`;
+                return (
+                  <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
+                    <input
+                      type="text"
+                      data-indicador={`of-${s}`}
+                      defaultValue={indicadores[`of-${s}`] ?? ""}
+                      onChange={(e) => actualizarIndicador(`of-${s}`, e.target.value)}
+                      placeholder="$"
+                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                    />
                   </td>
                 );
               })}

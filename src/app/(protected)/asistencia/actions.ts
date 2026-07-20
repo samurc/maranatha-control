@@ -5,6 +5,30 @@ import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 
 export async function guardarAsistencia(formData: FormData) {
   const dataJson = formData.get("data") as string;
+  const indicadorJson = formData.get("indicador") as string;
+
+  const db = obtenerFirestoreAdmin();
+
+  // Guardar indicador individual
+  if (indicadorJson) {
+    const { iglesiaId, unidadId, anio, trimestre, clave, valor } = JSON.parse(indicadorJson) as {
+      iglesiaId: string;
+      unidadId: string;
+      anio: number;
+      trimestre: number;
+      clave: string;
+      valor: string;
+    };
+    const docId = `${iglesiaId}_${unidadId}_${anio}_T${trimestre}_indicadores`;
+    await db.collection("indicadores_semanales").doc(docId).set(
+      { [clave]: valor, iglesiaId, unidadId, anio, trimestre, actualizadoEn: new Date() },
+      { merge: true }
+    );
+    revalidatePath("/asistencia");
+    return;
+  }
+
+  // Guardar asistencia
   if (!dataJson) return;
 
   const payload = JSON.parse(dataJson) as {
@@ -19,7 +43,6 @@ export async function guardarAsistencia(formData: FormData) {
   const { iglesiaId, unidadId, anio, trimestre, sabado, asistencia } = payload;
   if (!iglesiaId || !unidadId || !sabado) return;
 
-  const db = obtenerFirestoreAdmin();
   const registroId = `${iglesiaId}_${unidadId}_${anio}_T${trimestre}_S${sabado}`;
 
   // Calcular totales

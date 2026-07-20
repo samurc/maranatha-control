@@ -66,6 +66,7 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
     : null;
 
   let registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number }>> = {};
+  let indicadoresExistentes: Record<string, string> = {};
 
   if (registrosQuery) {
     const registrosSnap = await registrosQuery.get();
@@ -86,6 +87,20 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
     }
   }
 
+  // Cargar indicadores semanales
+  if (claims.unidadId && claims.iglesiaId) {
+    const indicadorDocId = `${claims.iglesiaId}_${claims.unidadId}_${anio}_T${trimestre}_indicadores`;
+    const indicadorDoc = await db.collection("indicadores_semanales").doc(indicadorDocId).get();
+    if (indicadorDoc.exists) {
+      const data = indicadorDoc.data()!;
+      for (const [k, v] of Object.entries(data)) {
+        if (typeof v === "string" && k !== "iglesiaId" && k !== "unidadId" && k !== "actualizadoEn") {
+          indicadoresExistentes[k] = v;
+        }
+      }
+    }
+  }
+
   return (
     <AsistenciaClient
       participantes={participantes}
@@ -96,6 +111,7 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
       iglesiaId={claims.iglesiaId ?? ""}
       unidadId={claims.unidadId ?? ""}
       registrosExistentes={registrosExistentes}
+      indicadoresExistentes={indicadoresExistentes}
     />
   );
 }
