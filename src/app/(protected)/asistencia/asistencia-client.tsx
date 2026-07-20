@@ -68,8 +68,7 @@ export function AsistenciaClient({
     return inicial;
   });
 
-  const [isPending, startTransition] = useTransition();
-  const [guardado, setGuardado] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
   const [indicadores, setIndicadores] = useState<Record<string, string>>(indicadoresExistentes);
 
   function actualizarCelda(participanteId: string, sabado: number, valor: CeldaValor) {
@@ -245,7 +244,6 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">3</td>
               <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° de discípulos dando estudios bíblicos</td>
               {SABADOS.map((s) => {
-                const clave = `S${s}`;
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -264,7 +262,6 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">4</td>
               <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° personas que recibieron estudios bíblicos</td>
               {SABADOS.map((s) => {
-                const clave = `S${s}`;
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -283,7 +280,6 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">5</td>
               <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que asistieron a G.P.</td>
               {SABADOS.map((s) => {
-                const clave = `S${s}`;
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -302,7 +298,6 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">6</td>
               <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que participaron de los 365 días con el espíritu santo</td>
               {SABADOS.map((s) => {
-                const clave = `S${s}`;
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -321,7 +316,6 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">7</td>
               <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">Ofrenda</td>
               {SABADOS.map((s) => {
-                const clave = `S${s}`;
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -330,6 +324,24 @@ export function AsistenciaClient({
                       defaultValue={indicadores[`of-${s}`] ?? ""}
                       onChange={(e) => actualizarIndicador(`of-${s}`, e.target.value)}
                       placeholder="$"
+                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="bg-foreground/[0.02]">
+              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">8</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° visitas</td>
+              {SABADOS.map((s) => {
+                return (
+                  <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
+                    <input
+                      type="number"
+                      min="0"
+                      data-indicador={`vi-${s}`}
+                      defaultValue={indicadores[`vi-${s}`] ?? ""}
+                      onChange={(e) => actualizarIndicador(`vi-${s}`, e.target.value)}
                       className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
                     />
                   </td>

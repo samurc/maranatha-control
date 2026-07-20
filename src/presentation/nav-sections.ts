@@ -74,6 +74,7 @@ export function construirMenuNavegacion(
   if (claims.role === "secretario" || claims.role === "maestro") {
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Asistencia", href: "/asistencia" });
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Cumpleaños", href: "/cumpleanos" });
+    items.push({ resource: "datos_personales" as Resource, etiqueta: "Estudios Bíblicos", href: "/estudios-biblicos" });
   }
 
   return items;
