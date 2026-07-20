@@ -112,6 +112,7 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
       unidadId={claims.unidadId ?? ""}
       registrosExistentes={registrosExistentes}
       indicadoresExistentes={indicadoresExistentes}
+      fechaHoy={ahora.toISOString().split("T")[0]!}
     />
   );
 }

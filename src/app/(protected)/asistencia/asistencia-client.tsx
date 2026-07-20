@@ -24,9 +24,20 @@ interface AsistenciaClientProps {
   unidadId: string;
   registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number }>>;
   indicadoresExistentes: Record<string, string>;
+  fechaHoy: string; // "YYYY-MM-DD"
 }
 
 const SABADOS = Array.from({ length: 13 }, (_, i) => i + 1);
+
+/** Calcula la fecha ISO del sábado N dentro del trimestre (misma lógica que actions.ts). */
+function calcularFechaSabado(anio: number, trimestre: number, numeroSabado: number): string {
+  const inicio = new Date(anio, (trimestre - 1) * 3, 1);
+  while (inicio.getDay() !== 6) {
+    inicio.setDate(inicio.getDate() + 1);
+  }
+  inicio.setDate(inicio.getDate() + (numeroSabado - 1) * 7);
+  return inicio.toISOString().split("T")[0]!;
+}
 
 function valorACelda(presente: boolean, diasEstudio: number): CeldaValor {
   return presente ? `P${diasEstudio}` : "F";
@@ -51,7 +62,13 @@ export function AsistenciaClient({
   unidadId,
   registrosExistentes,
   indicadoresExistentes,
+  fechaHoy,
 }: AsistenciaClientProps) {
+  // Sábados cuya fecha ya pasó son read-only
+  const sabadosCerrados = new Set<number>(
+    SABADOS.filter((s) => calcularFechaSabado(anio, trimestre, s) < fechaHoy)
+  );
+
   // Estado: grilla[participanteId][`S${sabado}`] = CeldaValor
   const [grilla, setGrilla] = useState<Record<string, Record<string, CeldaValor>>>(() => {
     const inicial: Record<string, Record<string, CeldaValor>> = {};
@@ -143,8 +160,13 @@ export function AsistenciaClient({
               <th className="sticky left-0 bg-foreground/[0.05] px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[40px]">#</th>
               <th className="sticky left-[40px] bg-foreground/[0.05] px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[180px]">Nombre y apellido</th>
               {SABADOS.map((s) => (
-                <th key={s} className="px-1 py-2 text-center font-semibold text-foreground/70 min-w-[42px] border-l border-foreground/5">
+                <th key={s} className={`px-1 py-2 text-center font-semibold min-w-[42px] border-l border-foreground/5 ${
+                  sabadosCerrados.has(s) ? "text-foreground/30" : "text-foreground/70"
+                }`}>
                   {s}°
+                  {sabadosCerrados.has(s) && (
+                    <span className="block text-[8px] text-foreground/25 leading-none">🔒</span>
+                  )}
                 </th>
               ))}
             </tr>
@@ -163,6 +185,7 @@ export function AsistenciaClient({
                   const valor = grilla[p.id]?.[clave] ?? "";
                   const esPresente = valor.startsWith("P");
                   const esFalta = valor === "F";
+                  const cerrado = sabadosCerrados.has(s);
                   return (
                     <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                       <input
@@ -170,7 +193,9 @@ export function AsistenciaClient({
                         data-row={idx}
                         data-col={s}
                         value={valor}
+                        readOnly={cerrado}
                         onChange={(e) => {
+                          if (cerrado) return;
                           const v = e.target.value.toUpperCase();
                           // Validar: vacío, F, o P seguido de 0-7
                           if (v === "" || v === "F" || v === "P" || /^P[0-7]$/.test(v)) {
@@ -189,14 +214,16 @@ export function AsistenciaClient({
                             nextInput?.select();
                           }
                         }}
-                        className={`w-full h-7 text-center text-xs font-medium rounded border transition-colors outline-none focus:ring-1 focus:ring-blue-500/50 ${
-                          esPresente
-                            ? "bg-blue-500/10 border-blue-500/30 text-blue-400"
-                            : esFalta
-                              ? "bg-red-500/10 border-red-500/30 text-red-400"
-                              : "bg-background border-foreground/10 text-foreground/60"
+                        className={`w-full h-7 text-center text-xs font-medium rounded border transition-colors outline-none ${
+                          cerrado
+                            ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed"
+                            : esPresente
+                              ? "bg-blue-500/10 border-blue-500/30 text-blue-400 focus:ring-1 focus:ring-blue-500/50"
+                              : esFalta
+                                ? "bg-red-500/10 border-red-500/30 text-red-400 focus:ring-1 focus:ring-blue-500/50"
+                                : "bg-background border-foreground/10 text-foreground/60 focus:ring-1 focus:ring-blue-500/50"
                         }`}
-                        placeholder="—"
+                        placeholder={cerrado ? "" : "—"}
                       />
                     </td>
                   );
@@ -244,6 +271,7 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">3</td>
               <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° de discípulos dando estudios bíblicos</td>
               {SABADOS.map((s) => {
+                const cerrado = sabadosCerrados.has(s);
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -251,8 +279,9 @@ export function AsistenciaClient({
                       min="0"
                       data-indicador={`eb-${s}`}
                       defaultValue={indicadores[`eb-${s}`] ?? ""}
-                      onChange={(e) => actualizarIndicador(`eb-${s}`, e.target.value)}
-                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      readOnly={cerrado}
+                      onChange={(e) => { if (!cerrado) actualizarIndicador(`eb-${s}`, e.target.value); }}
+                      className={`w-full h-6 text-center text-xs rounded border outline-none ${cerrado ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed" : "border-foreground/10 bg-background text-foreground/60 focus:ring-1 focus:ring-blue-500/50"}`}
                     />
                   </td>
                 );
@@ -262,6 +291,7 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">4</td>
               <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° personas que recibieron estudios bíblicos</td>
               {SABADOS.map((s) => {
+                const cerrado = sabadosCerrados.has(s);
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -269,8 +299,9 @@ export function AsistenciaClient({
                       min="0"
                       data-indicador={`re-${s}`}
                       defaultValue={indicadores[`re-${s}`] ?? ""}
-                      onChange={(e) => actualizarIndicador(`re-${s}`, e.target.value)}
-                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      readOnly={cerrado}
+                      onChange={(e) => { if (!cerrado) actualizarIndicador(`re-${s}`, e.target.value); }}
+                      className={`w-full h-6 text-center text-xs rounded border outline-none ${cerrado ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed" : "border-foreground/10 bg-background text-foreground/60 focus:ring-1 focus:ring-blue-500/50"}`}
                     />
                   </td>
                 );
@@ -280,6 +311,7 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">5</td>
               <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que asistieron a G.P.</td>
               {SABADOS.map((s) => {
+                const cerrado = sabadosCerrados.has(s);
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -287,8 +319,9 @@ export function AsistenciaClient({
                       min="0"
                       data-indicador={`gp-${s}`}
                       defaultValue={indicadores[`gp-${s}`] ?? ""}
-                      onChange={(e) => actualizarIndicador(`gp-${s}`, e.target.value)}
-                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      readOnly={cerrado}
+                      onChange={(e) => { if (!cerrado) actualizarIndicador(`gp-${s}`, e.target.value); }}
+                      className={`w-full h-6 text-center text-xs rounded border outline-none ${cerrado ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed" : "border-foreground/10 bg-background text-foreground/60 focus:ring-1 focus:ring-blue-500/50"}`}
                     />
                   </td>
                 );
@@ -298,6 +331,7 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">6</td>
               <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que participaron de los 365 días con el espíritu santo</td>
               {SABADOS.map((s) => {
+                const cerrado = sabadosCerrados.has(s);
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -305,8 +339,9 @@ export function AsistenciaClient({
                       min="0"
                       data-indicador={`ep-${s}`}
                       defaultValue={indicadores[`ep-${s}`] ?? ""}
-                      onChange={(e) => actualizarIndicador(`ep-${s}`, e.target.value)}
-                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      readOnly={cerrado}
+                      onChange={(e) => { if (!cerrado) actualizarIndicador(`ep-${s}`, e.target.value); }}
+                      className={`w-full h-6 text-center text-xs rounded border outline-none ${cerrado ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed" : "border-foreground/10 bg-background text-foreground/60 focus:ring-1 focus:ring-blue-500/50"}`}
                     />
                   </td>
                 );
@@ -316,15 +351,17 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">7</td>
               <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">Ofrenda</td>
               {SABADOS.map((s) => {
+                const cerrado = sabadosCerrados.has(s);
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
                       type="text"
                       data-indicador={`of-${s}`}
                       defaultValue={indicadores[`of-${s}`] ?? ""}
-                      onChange={(e) => actualizarIndicador(`of-${s}`, e.target.value)}
-                      placeholder="$"
-                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      readOnly={cerrado}
+                      onChange={(e) => { if (!cerrado) actualizarIndicador(`of-${s}`, e.target.value); }}
+                      placeholder={cerrado ? "" : "$"}
+                      className={`w-full h-6 text-center text-xs rounded border outline-none ${cerrado ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed" : "border-foreground/10 bg-background text-foreground/60 focus:ring-1 focus:ring-blue-500/50"}`}
                     />
                   </td>
                 );
@@ -334,6 +371,7 @@ export function AsistenciaClient({
               <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">8</td>
               <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° visitas</td>
               {SABADOS.map((s) => {
+                const cerrado = sabadosCerrados.has(s);
                 return (
                   <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
                     <input
@@ -341,8 +379,9 @@ export function AsistenciaClient({
                       min="0"
                       data-indicador={`vi-${s}`}
                       defaultValue={indicadores[`vi-${s}`] ?? ""}
-                      onChange={(e) => actualizarIndicador(`vi-${s}`, e.target.value)}
-                      className="w-full h-6 text-center text-xs rounded border border-foreground/10 bg-background text-foreground/60 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      readOnly={cerrado}
+                      onChange={(e) => { if (!cerrado) actualizarIndicador(`vi-${s}`, e.target.value); }}
+                      className={`w-full h-6 text-center text-xs rounded border outline-none ${cerrado ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed" : "border-foreground/10 bg-background text-foreground/60 focus:ring-1 focus:ring-blue-500/50"}`}
                     />
                   </td>
                 );

@@ -72,6 +72,7 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
         nombre: data.nombre as string,
         apellido: data.apellido as string,
         fechaNacimiento: data.fechaNacimiento as string,
+        estado: (data.estado as string) ?? "activo",
         dia: parsed.dia,
         mes: parsed.mes,
         diasRestantes,
@@ -110,8 +111,13 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
             {cumpleHoy.map((p) => (
               <div key={p.id} className="flex items-center gap-3 rounded-md bg-amber-500/10 px-3 py-2">
                 <span className="text-lg">🎉</span>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                      {p.estado === "activo" ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
                   <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
                   {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                 </div>
@@ -129,7 +135,12 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
             {proximosSemana.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-lg border border-foreground/10 bg-foreground/[0.02] px-3 py-2.5">
                 <div>
-                  <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                      {p.estado === "activo" ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
                   <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
                   {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                 </div>
@@ -153,6 +164,7 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
                   <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Nombre</th>
                   <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Fecha</th>
                   <th className="px-4 py-2.5 text-right font-medium text-foreground/70">Faltan</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Estado</th>
                   <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Comentario</th>
                 </tr>
               </thead>
@@ -162,6 +174,11 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
                     <td className="px-4 py-2.5 text-foreground">{p.nombre} {p.apellido}</td>
                     <td className="px-4 py-2.5 text-foreground/60">{p.dia} de {MESES[p.mes]}</td>
                     <td className="px-4 py-2.5 text-right text-foreground/50">{p.diasRestantes} días</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                        {p.estado === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
                     <td className="px-4 py-2.5 text-foreground/50 text-xs">{p.comentario || "—"}</td>
                   </tr>
                 ))}
@@ -182,6 +199,7 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
                   <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Nombre</th>
                   <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Fecha</th>
                   <th className="px-4 py-2.5 text-right font-medium text-foreground/70">Faltan</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Estado</th>
                   <th className="px-4 py-2.5 text-left font-medium text-foreground/70">Comentario</th>
                 </tr>
               </thead>
@@ -191,6 +209,11 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
                     <td className="px-4 py-2.5 text-foreground">{p.nombre} {p.apellido}</td>
                     <td className="px-4 py-2.5 text-foreground/60">{p.dia} de {MESES[p.mes]}</td>
                     <td className="px-4 py-2.5 text-right text-foreground/50">{p.diasRestantes} días</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                        {p.estado === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
                     <td className="px-4 py-2.5 text-foreground/50 text-xs">{p.comentario || "—"}</td>
                   </tr>
                 ))}
