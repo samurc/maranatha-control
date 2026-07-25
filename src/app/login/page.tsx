@@ -52,6 +52,11 @@ function LoginForm(): React.JSX.Element {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
   const [modalAbierto, setModalAbierto] = useState(false);
   const [emailRecuperacion, setEmailRecuperacion] = useState("");
   const [errorRecuperacion, setErrorRecuperacion] = useState<string | null>(null);
