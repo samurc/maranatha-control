@@ -16,7 +16,7 @@ function asistenciaAEntidad(data: Record<string, unknown>): AsistenciaParticipan
     ? data.seguimientoPastoral.map((s: Record<string, unknown>) => ({
         accion: s.accion as AsistenciaParticipante["seguimientoPastoral"][number]["accion"],
         registradoPor: s.registradoPor as string,
-        registradoEn: s.registradoEn?.toDate?.() ?? new Date(),
+        registradoEn: (s.registradoEn as { toDate?: () => Date } | null)?.toDate?.() ?? new Date(),
       }))
     : [];
 

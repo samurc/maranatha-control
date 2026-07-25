@@ -2,7 +2,7 @@ import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import { redirect } from "next/navigation";
 import { ModalForm, FormField } from "../../../presentation/components/modal-form";
-import { crearInstructorBiblico, crearEstudianteBiblico, editarEstudianteBiblico } from "./actions";
+import { crearInstructorBiblico, crearEstudianteBiblico } from "./actions";
 import { EstudiosClient } from "./estudios-client";
 import type {
   InstructorBiblico,
