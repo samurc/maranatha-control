@@ -52,16 +52,15 @@ function LoginForm(): React.JSX.Element {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [mensaje, setMensaje] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [emailRecuperacion, setEmailRecuperacion] = useState("");
+  const [errorRecuperacion, setErrorRecuperacion] = useState<string | null>(null);
+  const [mensajeRecuperacion, setMensajeRecuperacion] = useState<string | null>(null);
+  const [enviandoRecuperacion, setEnviandoRecuperacion] = useState(false);
 
   async function manejarSubmit(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault();
     setError(null);
-    setMensaje(null);
     setEnviando(true);
 
     try {
@@ -99,125 +98,190 @@ function LoginForm(): React.JSX.Element {
     }
   }
 
-  async function manejarRecuperarContrasena(): Promise<void> {
-    setError(null);
-    setMensaje(null);
+  async function manejarRecuperarContrasena(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
+    evento.preventDefault();
+    setErrorRecuperacion(null);
+    setMensajeRecuperacion(null);
 
-    if (!email) {
-      setError("Por favor, ingrese su correo electrónico para recuperar la contraseña.");
+    if (!emailRecuperacion) {
+      setErrorRecuperacion("Por favor, ingrese su correo electrónico.");
       return;
     }
 
-    setEnviando(true);
+    setEnviandoRecuperacion(true);
     try {
-      await sendPasswordResetEmail(firebaseAuthClient, email);
-      setMensaje("Se ha enviado un enlace de recuperación a su correo.");
+      await sendPasswordResetEmail(firebaseAuthClient, emailRecuperacion);
+      setMensajeRecuperacion("Se ha enviado un enlace de recuperación a su correo.");
+      setEmailRecuperacion(""); // Limpiamos el input en caso de éxito
     } catch (err) {
-      setError(mensajeDeErrorLegible(err));
+      setErrorRecuperacion(mensajeDeErrorLegible(err));
     } finally {
-      setEnviando(false);
+      setEnviandoRecuperacion(false);
     }
   }
 
-  return (
-    <main
-      aria-label="Iniciar sesión"
-      className="flex min-h-screen items-center justify-center px-4"
-    >
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Maranatha Control
-          </h1>
-          <p className="mt-2 text-sm text-foreground/60">
-            Inicia sesión para continuar
-          </p>
-        </div>
+  function abrirModal() {
+    setEmailRecuperacion(email); // Opcional: pre-llenar con el email ya escrito
+    setErrorRecuperacion(null);
+    setMensajeRecuperacion(null);
+    setModalAbierto(true);
+  }
 
-        <form
-          onSubmit={(evento) => void manejarSubmit(evento)}
-          className="space-y-5"
-        >
-          <div className="space-y-1.5">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-foreground/80"
-            >
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(evento) => setEmail(evento.target.value)}
-              placeholder="usuario@ejemplo.com"
-              className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
-            />
+  function cerrarModal() {
+    setModalAbierto(false);
+  }
+
+  return (
+    <>
+      <main
+        aria-label="Iniciar sesión"
+        className="flex min-h-screen items-center justify-center px-4"
+      >
+        <div className="w-full max-w-sm space-y-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Maranatha Control
+            </h1>
+            <p className="mt-2 text-sm text-foreground/60">
+              Inicia sesión para continuar
+            </p>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+          <form
+            onSubmit={(evento) => void manejarSubmit(evento)}
+            className="space-y-5"
+          >
+            <div className="space-y-1.5">
               <label
-                htmlFor="password"
+                htmlFor="email"
                 className="block text-sm font-medium text-foreground/80"
               >
-                Contraseña
+                Correo electrónico
               </label>
-              <button
-                type="button"
-                onClick={() => void manejarRecuperarContrasena()}
-                disabled={enviando}
-                className="text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none disabled:opacity-50"
-              >
-                ¿Olvidó su contraseña?
-              </button>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(evento) => setEmail(evento.target.value)}
+                placeholder="usuario@ejemplo.com"
+                className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+              />
             </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(evento) => setPassword(evento.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
-            />
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-foreground/80"
+                >
+                  Contraseña
+                </label>
+                <button
+                  type="button"
+                  onClick={abrirModal}
+                  disabled={enviando}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none disabled:opacity-50"
+                >
+                  ¿Olvidó su contraseña?
+                </button>
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(evento) => setPassword(evento.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+              />
+            </div>
+
+            {error !== null ? (
+              <p
+                role="alert"
+                aria-live="assertive"
+                className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
+              >
+                {error}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={enviando}
+              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {enviando ? "Iniciando sesión..." : "Iniciar sesión"}
+            </button>
+          </form>
+        </div>
+      </main>
+
+      {/* Modal de Recuperación de Contraseña */}
+      {modalAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl bg-background p-6 shadow-xl ring-1 ring-foreground/10">
+            <h2 className="text-lg font-semibold text-foreground">Recuperar contraseña</h2>
+            <p className="mt-2 text-sm text-foreground/70">
+              Ingresa tu correo y te enviaremos un enlace para que puedas restablecerla.
+            </p>
+
+            <form onSubmit={(evento) => void manejarRecuperarContrasena(evento)} className="mt-4 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="emailRecuperacion" className="block text-sm font-medium text-foreground/80">
+                  Correo electrónico
+                </label>
+                <input
+                  id="emailRecuperacion"
+                  name="emailRecuperacion"
+                  type="email"
+                  required
+                  value={emailRecuperacion}
+                  onChange={(evento) => setEmailRecuperacion(evento.target.value)}
+                  placeholder="usuario@ejemplo.com"
+                  className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                />
+              </div>
+
+              {errorRecuperacion !== null && (
+                <p role="alert" className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+                  {errorRecuperacion}
+                </p>
+              )}
+
+              {mensajeRecuperacion !== null && (
+                <p role="status" className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+                  {mensajeRecuperacion}
+                </p>
+              )}
+
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={cerrarModal}
+                  disabled={enviandoRecuperacion}
+                  className="rounded-lg px-4 py-2.5 text-sm font-medium text-foreground hover:bg-foreground/5 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={enviandoRecuperacion}
+                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50"
+                >
+                  {enviandoRecuperacion ? "Enviando..." : "Enviar enlace"}
+                </button>
+              </div>
+            </form>
           </div>
-
-          {error !== null ? (
-            <p
-              role="alert"
-              aria-live="assertive"
-              className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          {mensaje !== null ? (
-            <p
-              role="status"
-              aria-live="polite"
-              className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400"
-            >
-              {mensaje}
-            </p>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={enviando}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {enviando ? "Procesando..." : "Iniciar sesión"}
-          </button>
-        </form>
-      </div>
-    </main>
+        </div>
+      )}
+    </>
   );
 }
 
