@@ -28,14 +28,21 @@ export async function POST(request: Request): Promise<Response> {
   const body = await request.json().catch(() => null);
   const dto = LoginRequestSchema.safeParse(body);
   if (!dto.success) {
-    return Response.json({ error: "Cuerpo de solicitud inválido." }, { status: 400 });
+    return new Response(JSON.stringify({ error: "Cuerpo de solicitud inválido." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
   }
 
   let claims;
   try {
     claims = await verificarIdToken(dto.data.idToken);
-  } catch {
-    return Response.json({ error: "El token de sesión no es válido." }, { status: 401 });
+  } catch (err) {
+    console.error("[login] verificarIdToken falló:", err);
+    return new Response(JSON.stringify({ error: "El token de sesión no es válido.", detail: String(err) }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
   }
 
   try {
@@ -47,12 +54,16 @@ export async function POST(request: Request): Promise<Response> {
       path: "/",
       maxAge: SESION_MAX_AGE_SEGUNDOS,
     });
-  } catch {
-    return Response.json(
-      { error: "No se pudo iniciar la sesión." },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("[login] cookieStore.set falló:", err);
+    return new Response(JSON.stringify({ error: "No se pudo iniciar la sesión.", detail: String(err) }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
   }
 
-  return Response.json({ ok: true, uid: claims.uid });
+  return new Response(JSON.stringify({ ok: true, uid: claims.uid }), {
+    status: 200,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
 }
