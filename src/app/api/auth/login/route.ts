@@ -17,7 +17,6 @@
  * propia navegación — este Route Handler solo verifica el token y fija la
  * cookie (ver design.md, "Flujo de login").
  */
-import { cookies } from "next/headers";
 import { LoginRequestSchema } from "../../../../application/dto/auth.schema";
 import { verificarIdToken } from "../../../../infrastructure/firebase-admin";
 import { COOKIE_SESION } from "../../../../presentation/session";
