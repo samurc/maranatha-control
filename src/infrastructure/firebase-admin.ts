@@ -58,13 +58,13 @@ function leerCredencialServidorOLanzar(): CredencialServidor {
     valores[nombre] = valor;
   }
   return {
-    projectId: valores.FIREBASE_ADMIN_PROJECT_ID!,
-    clientEmail: valores.FIREBASE_ADMIN_CLIENT_EMAIL!,
+    projectId: valores.FIREBASE_ADMIN_PROJECT_ID!.trim(),
+    clientEmail: valores.FIREBASE_ADMIN_CLIENT_EMAIL!.trim(),
     // Las claves privadas provistas vía variables de entorno suelen
     // escapar los saltos de línea reales como la secuencia literal
     // `\n`; se restauran a saltos de línea reales antes de pasarla a
     // `cert()`.
-    privateKey: valores.FIREBASE_ADMIN_PRIVATE_KEY!.replace(/\\n/g, "\n"),
+    privateKey: valores.FIREBASE_ADMIN_PRIVATE_KEY!.replace(/\\n/g, "\n").trim(),
   };
 }
 
