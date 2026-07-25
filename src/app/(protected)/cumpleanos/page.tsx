@@ -19,6 +19,13 @@ function diasHastaCumple(dia: number, mes: number, hoy: Date): number {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
+/** Negativo = cumpleaños ya pasó hace N días este año. Positivo = faltan N días. 0 = hoy. */
+function diasRelativosAlCumple(dia: number, mes: number, hoy: Date): number {
+  const cumpleEsteAnio = new Date(hoy.getFullYear(), mes - 1, dia);
+  const diff = cumpleEsteAnio.getTime() - hoy.getTime();
+  return Math.round(diff / (1000 * 60 * 60 * 24));
+}
+
 const MESES = [
   "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
@@ -67,6 +74,7 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
       const parsed = parseFechaNacimiento(data.fechaNacimiento as string);
       if (!parsed) return null;
       const diasRestantes = diasHastaCumple(parsed.dia, parsed.mes, hoy);
+      const diasPasados = diasRelativosAlCumple(parsed.dia, parsed.mes, hoy); // negativo si ya pasó
       return {
         id: d.id,
         nombre: data.nombre as string,
@@ -76,6 +84,7 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
         dia: parsed.dia,
         mes: parsed.mes,
         diasRestantes,
+        diasPasados,
         comentario: (data.comentario as string) ?? "",
       };
     })
@@ -93,6 +102,10 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
   const proximosSemana = participantes.filter((p) => p.diasRestantes > 0 && p.diasRestantes <= 7);
   const proximosMes = participantes.filter((p) => p.diasRestantes > 7 && p.diasRestantes <= 30);
   const restantes = participantes.filter((p) => p.diasRestantes > 30);
+  // Cumpleaños que ocurrieron en los últimos 7 días (excluyendo hoy)
+  const ultimaSemana = participantes
+    .filter((p) => p.diasPasados >= -7 && p.diasPasados < 0)
+    .sort((a, b) => b.diasPasados - a.diasPasados); // más reciente primero
 
   return (
     <div className="space-y-6">
@@ -127,8 +140,36 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
         </div>
       )}
 
-      {/* Esta semana */}
-      {proximosSemana.length > 0 && (
+      {/* Última semana */}
+      {ultimaSemana.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">🕐 Cumplieron la semana pasada</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {ultimaSemana.map((p) => {
+              const hace = Math.abs(p.diasPasados);
+              return (
+                <div key={p.id} className="flex items-center justify-between rounded-lg border border-foreground/10 bg-foreground/[0.02] px-3 py-2.5 opacity-70">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                        {p.estado === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                    {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
+                  </div>
+                  <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/40 whitespace-nowrap">
+                    Hace {hace} {hace === 1 ? "día" : "días"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Esta semana */}      {proximosSemana.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Próximos 7 días</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
