@@ -22,7 +22,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
 import { firebaseAuthClient } from "../../infrastructure/firebase-client";
 
 function mensajeDeErrorLegible(error: unknown): string {
@@ -35,6 +35,9 @@ function mensajeDeErrorLegible(error: unknown): string {
     const code = (error as { code: string }).code;
     if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
       return "Correo o contraseña incorrectos.";
+    }
+    if (code === "auth/invalid-email") {
+      return "El formato del correo es inválido.";
     }
     return `Error de autenticación (${code}).`;
   }
@@ -52,11 +55,13 @@ function LoginForm(): React.JSX.Element {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   async function manejarSubmit(evento: React.FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault();
     setError(null);
+    setMensaje(null);
     setEnviando(true);
 
     try {
@@ -88,6 +93,26 @@ function LoginForm(): React.JSX.Element {
     } catch (err) {
       // Requirement 22.2: credenciales rechazadas por Firebase Auth, sin
       // fijar ninguna Cookie_Sesion.
+      setError(mensajeDeErrorLegible(err));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function manejarRecuperarContrasena(): Promise<void> {
+    setError(null);
+    setMensaje(null);
+
+    if (!email) {
+      setError("Por favor, ingrese su correo electrónico para recuperar la contraseña.");
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      await sendPasswordResetEmail(firebaseAuthClient, email);
+      setMensaje("Se ha enviado un enlace de recuperación a su correo.");
+    } catch (err) {
       setError(mensajeDeErrorLegible(err));
     } finally {
       setEnviando(false);
@@ -134,12 +159,22 @@ function LoginForm(): React.JSX.Element {
           </div>
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-foreground/80"
-            >
-              Contraseña
-            </label>
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-foreground/80"
+              >
+                Contraseña
+              </label>
+              <button
+                type="button"
+                onClick={() => void manejarRecuperarContrasena()}
+                disabled={enviando}
+                className="text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none disabled:opacity-50"
+              >
+                ¿Olvidó su contraseña?
+              </button>
+            </div>
             <input
               id="password"
               name="password"
@@ -163,12 +198,22 @@ function LoginForm(): React.JSX.Element {
             </p>
           ) : null}
 
+          {mensaje !== null ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400"
+            >
+              {mensaje}
+            </p>
+          ) : null}
+
           <button
             type="submit"
             disabled={enviando}
             className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {enviando ? "Iniciando sesión..." : "Iniciar sesión"}
+            {enviando ? "Procesando..." : "Iniciar sesión"}
           </button>
         </form>
       </div>
