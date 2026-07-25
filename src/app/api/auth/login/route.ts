@@ -45,25 +45,13 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  try {
-    const cookieStore = await cookies();
-    cookieStore.set(COOKIE_SESION, dto.data.idToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: SESION_MAX_AGE_SEGUNDOS,
-    });
-  } catch (err) {
-    console.error("[login] cookieStore.set falló:", err);
-    return new Response(JSON.stringify({ error: "No se pudo iniciar la sesión.", detail: String(err) }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
+  let cookieValue = `${COOKIE_SESION}=${dto.data.idToken}; Path=/; Max-Age=${SESION_MAX_AGE_SEGUNDOS}; SameSite=Lax; HttpOnly`;
+  if (process.env.NODE_ENV === "production") {
+    cookieValue += "; Secure";
   }
 
   return new Response(JSON.stringify({ ok: true, uid: claims.uid }), {
     status: 200,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Set-Cookie": cookieValue },
   });
 }
