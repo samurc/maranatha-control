@@ -86,6 +86,7 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
         diasRestantes,
         diasPasados,
         comentario: (data.comentario as string) ?? "",
+        fotoUrl: (data.fotoUrl as string) ?? "",
       };
     })
     .filter((p): p is NonNullable<typeof p> => p !== null)
@@ -125,14 +126,25 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
               <div key={p.id} className="flex items-center gap-3 rounded-md bg-amber-500/10 px-3 py-2">
                 <span className="text-lg">🎉</span>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
-                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
-                      {p.estado === "activo" ? "Activo" : "Inactivo"}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    {p.fotoUrl ? (
+                      <img src={p.fotoUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20 shrink-0">
+                        {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                        <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                          {p.estado === "activo" ? "Activo" : "Inactivo"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
-                  {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
+                  {p.comentario && <p className="text-xs text-foreground/40 mt-1.5 ml-13">{p.comentario}</p>}
                 </div>
               </div>
             ))}
@@ -149,15 +161,24 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
               const hace = Math.abs(p.diasPasados);
               return (
                 <div key={p.id} className="flex items-center justify-between rounded-lg border border-foreground/10 bg-foreground/[0.02] px-3 py-2.5 opacity-70">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
-                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
-                        {p.estado === "activo" ? "Activo" : "Inactivo"}
-                      </span>
+                  <div className="flex items-center gap-3">
+                    {p.fotoUrl ? (
+                      <img src={p.fotoUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20 shrink-0">
+                        {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                        <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                          {p.estado === "activo" ? "Activo" : "Inactivo"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                      {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                     </div>
-                    <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
-                    {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                   </div>
                   <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/40 whitespace-nowrap">
                     Hace {hace} {hace === 1 ? "día" : "días"}
@@ -175,15 +196,24 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {proximosSemana.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-lg border border-foreground/10 bg-foreground/[0.02] px-3 py-2.5">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
-                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
-                      {p.estado === "activo" ? "Activo" : "Inactivo"}
-                    </span>
+                <div className="flex items-center gap-3">
+                  {p.fotoUrl ? (
+                    <img src={p.fotoUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20 shrink-0">
+                      {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                        {p.estado === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                    {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                   </div>
-                  <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
-                  {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                 </div>
                 <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400">
                   {p.diasRestantes === 1 ? "Mañana" : `En ${p.diasRestantes} días`}
@@ -213,7 +243,18 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
               <tbody className="divide-y divide-foreground/5">
                 {proximosMes.map((p) => (
                   <tr key={p.id} className="hover:bg-foreground/[0.02] transition-colors">
-                    <td className="px-4 py-2.5 text-foreground">{p.nombre} {p.apellido}</td>
+                    <td className="px-4 py-2.5 text-foreground">
+                      <div className="flex items-center gap-3">
+                        {p.fotoUrl ? (
+                          <img src={p.fotoUrl} alt="" className="w-8 h-8 rounded-full object-cover bg-foreground/5" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs font-bold border border-blue-500/20 shrink-0">
+                            {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span>{p.nombre} {p.apellido}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5 text-foreground/60">{p.dia} de {MESES[p.mes]}</td>
                     <td className="px-4 py-2.5 text-right text-foreground/50">{p.diasRestantes} días</td>
                     <td className="px-4 py-2.5">
@@ -232,15 +273,24 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
           <div className="md:hidden space-y-3">
             {proximosMes.map((p) => (
               <div key={p.id} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 flex justify-between items-center">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
-                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
-                      {p.estado === "activo" ? "Activo" : "Inactivo"}
-                    </span>
+                <div className="flex items-center gap-3">
+                  {p.fotoUrl ? (
+                    <img src={p.fotoUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20 shrink-0">
+                      {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                        {p.estado === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                    {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                   </div>
-                  <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
-                  {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                 </div>
                 <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/60 whitespace-nowrap">
                   En {p.diasRestantes} días
@@ -270,7 +320,18 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
               <tbody className="divide-y divide-foreground/5">
                 {restantes.map((p) => (
                   <tr key={p.id} className="hover:bg-foreground/[0.02] transition-colors">
-                    <td className="px-4 py-2.5 text-foreground">{p.nombre} {p.apellido}</td>
+                    <td className="px-4 py-2.5 text-foreground">
+                      <div className="flex items-center gap-3">
+                        {p.fotoUrl ? (
+                          <img src={p.fotoUrl} alt="" className="w-8 h-8 rounded-full object-cover bg-foreground/5" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs font-bold border border-blue-500/20 shrink-0">
+                            {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span>{p.nombre} {p.apellido}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5 text-foreground/60">{p.dia} de {MESES[p.mes]}</td>
                     <td className="px-4 py-2.5 text-right text-foreground/50">{p.diasRestantes} días</td>
                     <td className="px-4 py-2.5">
@@ -289,15 +350,24 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
           <div className="md:hidden space-y-3">
             {restantes.map((p) => (
               <div key={p.id} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 flex justify-between items-center">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
-                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
-                      {p.estado === "activo" ? "Activo" : "Inactivo"}
-                    </span>
+                <div className="flex items-center gap-3">
+                  {p.fotoUrl ? (
+                    <img src={p.fotoUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20 shrink-0">
+                      {p.nombre.charAt(0).toUpperCase()}{p.apellido.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                        {p.estado === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                    {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                   </div>
-                  <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
-                  {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
                 </div>
                 <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/60 whitespace-nowrap">
                   En {p.diasRestantes} días

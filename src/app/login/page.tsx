@@ -140,9 +140,9 @@ function LoginForm(): React.JSX.Element {
     <>
       <main
         aria-label="Iniciar sesión"
-        className="flex min-h-screen items-center justify-center px-4"
+        className="fixed inset-0 flex items-center justify-center px-4 overflow-hidden bg-background"
       >
-        <div className="w-full max-w-sm space-y-8">
+        <div className="w-full max-w-sm space-y-8 overflow-y-auto max-h-full py-6 no-scrollbar">
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Maranatha Control

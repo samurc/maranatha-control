@@ -33,7 +33,7 @@ async function setCors() {
      if (buckets.find((b) => b.name === bucketName)) {
         console.log(`Fallback a bucket: ${bucketName}`);
      } else if (buckets.length > 0) {
-        bucketName = buckets[0].name;
+        bucketName = buckets[0]!.name;
         console.log(`Usando el primer bucket encontrado: ${bucketName}`);
      } else {
         console.error("No se encontraron buckets en este proyecto.");
