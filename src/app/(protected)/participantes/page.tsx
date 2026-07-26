@@ -164,7 +164,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                   </span>
                 </div>
               </div>
-              {p.comentario && (
+              {(p.comentario as string) && (
                 <div className="text-xs text-foreground/70 bg-foreground/5 rounded px-2 py-1.5 border border-foreground/5">
                   {p.comentario as string}
                 </div>

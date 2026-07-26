@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 
 interface ImageCropperModalProps {
@@ -58,7 +58,7 @@ export function ImageCropperModal({ imageSrc, onCropDone, onCancel }: ImageCropp
               type="range"
               value={zoom}
               min={1}
-              max={3}
+              max={7}
               step={0.1}
               aria-labelledby="Zoom"
               onChange={(e) => setZoom(Number(e.target.value))}
