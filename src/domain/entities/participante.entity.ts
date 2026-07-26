@@ -29,5 +29,6 @@ export interface Participante {
   /** `uid` de Firebase Auth del Alumno vinculado, si existe (Requirement 6.5, 6.6). */
   readonly userUid?: string;
   readonly codigoEnlace?: CodigoEnlace;
+  readonly fotoUrl?: string;
   readonly creadoEn: Date;
 }

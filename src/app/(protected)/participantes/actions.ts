@@ -16,6 +16,7 @@ export async function crearParticipante(formData: FormData) {
   const distritoResidencia = formData.get("distritoResidencia") as string;
   const direccion = formData.get("direccion") as string;
   const comentario = formData.get("comentario") as string;
+  const fotoUrl = formData.get("fotoUrl") as string;
 
   if (!nombre || !apellido || !iglesiaId) return;
 
@@ -34,6 +35,7 @@ export async function crearParticipante(formData: FormData) {
     ...(distritoResidencia && { distritoResidencia }),
     ...(direccion && { direccion }),
     ...(comentario && { comentario }),
+    ...(fotoUrl && { fotoUrl }),
     creadoEn: new Date(),
   });
 
@@ -62,6 +64,7 @@ export async function editarParticipante(formData: FormData) {
   const distritoResidencia = formData.get("distritoResidencia") as string;
   const direccion = formData.get("direccion") as string;
   const comentario = formData.get("comentario") as string;
+  const fotoUrl = formData.get("fotoUrl") as string;
 
   if (!id || !nombre || !apellido) return;
 
@@ -77,6 +80,7 @@ export async function editarParticipante(formData: FormData) {
     distritoResidencia: distritoResidencia || null,
     direccion: direccion || null,
     comentario: comentario || null,
+    fotoUrl: fotoUrl || null,
     actualizadoEn: new Date(),
   });
 

@@ -78,7 +78,16 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
             <tbody className="divide-y divide-foreground/5">
               {participantes.map((p: Record<string, unknown>) => (
                 <tr key={p.id as string} className="hover:bg-foreground/[0.02] transition-colors">
-                  <td className="px-4 py-3 text-foreground font-medium">{p.nombre as string} {p.apellido as string}</td>
+                  <td className="px-4 py-3 text-foreground font-medium flex items-center gap-3">
+                    {p.fotoUrl ? (
+                      <img src={p.fotoUrl as string} alt="" className="w-8 h-8 rounded-full object-cover bg-foreground/5" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs font-bold border border-blue-500/20">
+                        {(p.nombre as string).charAt(0).toUpperCase()}{(p.apellido as string).charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {p.nombre as string} {p.apellido as string}
+                  </td>
                   <td className="px-4 py-3 text-foreground/70 text-xs">{(p.fechaNacimiento as string) ?? "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -109,6 +118,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                         distritoResidencia: p.distritoResidencia as string | undefined,
                         direccion: p.direccion as string | undefined,
                         comentario: p.comentario as string | undefined,
+                        fotoUrl: p.fotoUrl as string | undefined,
                       }}
                       action={editarParticipante}
                     />
@@ -128,9 +138,18 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
           {participantes.map((p: Record<string, unknown>) => (
             <div key={p.id as string} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 space-y-3">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium text-foreground text-sm">{p.nombre as string} {p.apellido as string}</p>
-                  <p className="text-xs text-foreground/60 mt-0.5">F. Nac: {(p.fechaNacimiento as string) || "—"}</p>
+                <div className="flex items-center gap-3">
+                  {p.fotoUrl ? (
+                    <img src={p.fotoUrl as string} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20">
+                      {(p.nombre as string).charAt(0).toUpperCase()}{(p.apellido as string).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-foreground text-sm">{p.nombre as string} {p.apellido as string}</p>
+                    <p className="text-xs text-foreground/60 mt-0.5">F. Nac: {(p.fechaNacimiento as string) || "—"}</p>
+                  </div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -164,6 +183,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                     distritoResidencia: p.distritoResidencia as string | undefined,
                     direccion: p.direccion as string | undefined,
                     comentario: p.comentario as string | undefined,
+                    fotoUrl: p.fotoUrl as string | undefined,
                   }}
                   action={editarParticipante}
                 />
