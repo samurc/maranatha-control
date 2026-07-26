@@ -91,8 +91,8 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
           </div>
         </div>
 
-        {/* Tabla de registros */}
-        <div className="overflow-x-auto rounded-lg border border-foreground/10">
+        {/* Tabla de registros (Desktop) */}
+        <div className="hidden md:block overflow-x-auto rounded-lg border border-foreground/10">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
@@ -140,6 +140,61 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Tarjetas de registros (Mobile) */}
+        <div className="md:hidden space-y-4">
+          {registros.map((r: Record<string, unknown>) => {
+            const totales = r.totalesRapidos as { presentes: number; ausentes: number; visitas: number } | undefined;
+            const sabado = r.sabadoEclesiastico as { fechaISO?: string; numeroSabado?: number; numeroTrimestre?: number } | undefined;
+            const numSabado = sabado?.numeroSabado;
+            
+            return (
+              <div key={r.id as string} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 space-y-3">
+                <div className="flex justify-between items-center border-b border-foreground/5 pb-2">
+                  <div className="font-medium text-foreground text-sm">
+                    {sabado?.fechaISO ?? "—"}
+                  </div>
+                  <div className="text-xs font-medium text-foreground/50 bg-foreground/5 px-2 py-0.5 rounded-full">
+                    T{sabado?.numeroTrimestre} S{numSabado}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-green-500/5 rounded p-2 text-center">
+                    <p className="text-[10px] uppercase text-green-500/70 font-semibold mb-0.5">Presentes</p>
+                    <p className="text-lg font-bold text-green-500">{totales?.presentes ?? 0}</p>
+                  </div>
+                  <div className="bg-red-500/5 rounded p-2 text-center">
+                    <p className="text-[10px] uppercase text-red-500/70 font-semibold mb-0.5">Ausentes</p>
+                    <p className="text-lg font-bold text-red-400">{totales?.ausentes ?? 0}</p>
+                  </div>
+                </div>
+
+                {esRolOperativo && Object.keys(indicadores).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-foreground/5">
+                    <p className="text-[10px] font-semibold text-foreground/40 uppercase mb-2">Indicadores</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {INDICADORES_LABELS.map(({ prefijo, label }) => {
+                        const val = numSabado != null ? (indicadores[`${prefijo}-${numSabado}`] ?? "—") : "—";
+                        return (
+                          <div key={prefijo} className="flex justify-between text-xs">
+                            <span className="text-foreground/60 truncate mr-2" title={label}>{label.substring(0, 15)}...</span>
+                            <span className="font-medium text-foreground">{val}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {registros.length === 0 && (
+            <div className="p-8 text-center text-sm text-foreground/50 border border-foreground/10 rounded-lg">
+              Sin registros sabáticos
+            </div>
+          )}
         </div>
       </div>
     );

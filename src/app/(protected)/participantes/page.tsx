@@ -62,7 +62,8 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
           />
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-foreground/10">
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto rounded-lg border border-foreground/10">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
@@ -120,6 +121,61 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden space-y-4">
+          {participantes.map((p: Record<string, unknown>) => (
+            <div key={p.id as string} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-foreground text-sm">{p.nombre as string} {p.apellido as string}</p>
+                  <p className="text-xs text-foreground/60 mt-0.5">F. Nac: {(p.fechaNacimiento as string) || "—"}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
+                  }`}>
+                    {p.estado as string}
+                  </span>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
+                  }`}>
+                    {p.esVisita ? "Visita" : "Miembro"}
+                  </span>
+                </div>
+              </div>
+              {p.comentario && (
+                <div className="text-xs text-foreground/70 bg-foreground/5 rounded px-2 py-1.5 border border-foreground/5">
+                  {p.comentario as string}
+                </div>
+              )}
+              <div className="flex justify-end space-x-3 pt-3 border-t border-foreground/5 mt-3">
+                <EditarParticipanteForm
+                  participante={{
+                    id: p.id as string,
+                    nombre: p.nombre as string,
+                    apellido: p.apellido as string,
+                    esVisita: p.esVisita as boolean,
+                    estado: p.estado as string | undefined,
+                    fechaNacimiento: p.fechaNacimiento as string | undefined,
+                    celular: p.celular as string | undefined,
+                    correo: p.correo as string | undefined,
+                    distritoResidencia: p.distritoResidencia as string | undefined,
+                    direccion: p.direccion as string | undefined,
+                    comentario: p.comentario as string | undefined,
+                  }}
+                  action={editarParticipante}
+                />
+                <DeleteButton id={p.id as string} action={eliminarParticipante} entityName={`${p.nombre as string} ${p.apellido as string}`} />
+              </div>
+            </div>
+          ))}
+          {participantes.length === 0 && (
+            <div className="p-8 text-center text-sm text-foreground/50 border border-foreground/10 rounded-lg">
+              Sin participantes registrados
+            </div>
+          )}
         </div>
       </div>
     );

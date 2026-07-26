@@ -198,7 +198,8 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
       {proximosMes.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Próximos 30 días</h2>
-          <div className="overflow-x-auto rounded-lg border border-foreground/10">
+          {/* Tabla (Desktop) */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-foreground/10">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
@@ -226,6 +227,27 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
               </tbody>
             </table>
           </div>
+
+          {/* Tarjetas (Mobile) */}
+          <div className="md:hidden space-y-3">
+            {proximosMes.map((p) => (
+              <div key={p.id} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                      {p.estado === "activo" ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                  {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
+                </div>
+                <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/60 whitespace-nowrap">
+                  En {p.diasRestantes} días
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -233,7 +255,8 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
       {restantes.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Más adelante</h2>
-          <div className="overflow-x-auto rounded-lg border border-foreground/10">
+          {/* Tabla (Desktop) */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-foreground/10">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
@@ -260,6 +283,27 @@ export default async function CumpleanosPage(): Promise<React.JSX.Element> {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Tarjetas (Mobile) */}
+          <div className="md:hidden space-y-3">
+            {restantes.map((p) => (
+              <div key={p.id} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">{p.nombre} {p.apellido}</p>
+                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                      {p.estado === "activo" ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground/50">{p.dia} de {MESES[p.mes]}</p>
+                  {p.comentario && <p className="text-xs text-foreground/40 mt-0.5">{p.comentario}</p>}
+                </div>
+                <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/60 whitespace-nowrap">
+                  En {p.diasRestantes} días
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -157,8 +157,8 @@ export function AsistenciaClient({
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="bg-foreground/[0.05]">
-              <th className="sticky left-0 bg-foreground/[0.05] px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[40px]">#</th>
-              <th className="sticky left-[40px] bg-foreground/[0.05] px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[180px]">Nombre y apellido</th>
+              <th className="sticky left-0 bg-foreground/[0.05] z-10 px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[40px]">#</th>
+              <th className="sticky left-[40px] bg-foreground/[0.05] z-10 px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none truncate">Nombre y apellido</th>
               {SABADOS.map((s) => (
                 <th key={s} className={`px-1 py-2 text-center font-semibold min-w-[42px] border-l border-foreground/5 ${
                   sabadosCerrados.has(s) ? "text-foreground/30" : "text-foreground/70"
@@ -174,10 +174,10 @@ export function AsistenciaClient({
           <tbody className="divide-y divide-foreground/5">
             {participantes.map((p, idx) => (
               <tr key={p.id} className="hover:bg-foreground/[0.02] transition-colors">
-                <td className="sticky left-0 bg-background px-2 py-1.5 text-foreground/50 border-r border-foreground/10 text-center">
+                <td className="sticky left-0 bg-background z-10 px-2 py-1.5 text-foreground/50 border-r border-foreground/10 text-center">
                   {idx + 1}
                 </td>
-                <td className="sticky left-[40px] bg-background px-2 py-1.5 text-foreground font-medium border-r border-foreground/10 whitespace-nowrap">
+                <td className="sticky left-[40px] bg-background z-10 px-2 py-1.5 text-foreground font-medium border-r border-foreground/10 truncate min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none" title={`${p.nombre} ${p.apellido}`}>
                   {p.nombre} {p.apellido}
                 </td>
                 {SABADOS.map((s) => {
@@ -234,8 +234,8 @@ export function AsistenciaClient({
           {/* Fila de totales */}
           <tfoot>
             <tr className="bg-foreground/[0.03] font-semibold">
-              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">1</td>
-              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° alumnos presentes</td>
+              <td className="sticky left-0 bg-foreground/[0.03] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">1</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° alumnos presentes</td>
               {SABADOS.map((s) => {
                 const clave = `S${s}`;
                 let presentes = 0;
@@ -251,8 +251,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.02]">
-              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">2</td>
-              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° alumnos que estudiaron diariamente la lección</td>
+              <td className="sticky left-0 bg-foreground/[0.02] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">2</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° alumnos que estudiaron diariamente la lección</td>
               {SABADOS.map((s) => {
                 const clave = `S${s}`;
                 let estudiaron = 0;
@@ -268,8 +268,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.03]">
-              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">3</td>
-              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° de discípulos dando estudios bíblicos</td>
+              <td className="sticky left-0 bg-foreground/[0.03] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">3</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° de discípulos dando estudios bíblicos</td>
               {SABADOS.map((s) => {
                 const cerrado = sabadosCerrados.has(s);
                 return (
@@ -288,8 +288,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.02]">
-              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">4</td>
-              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° personas que recibieron estudios bíblicos</td>
+              <td className="sticky left-0 bg-foreground/[0.02] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">4</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° personas que recibieron estudios bíblicos</td>
               {SABADOS.map((s) => {
                 const cerrado = sabadosCerrados.has(s);
                 return (
@@ -308,8 +308,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.03]">
-              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">5</td>
-              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que asistieron a G.P.</td>
+              <td className="sticky left-0 bg-foreground/[0.03] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">5</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° discípulos que asistieron a G.P.</td>
               {SABADOS.map((s) => {
                 const cerrado = sabadosCerrados.has(s);
                 return (
@@ -328,8 +328,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.02]">
-              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">6</td>
-              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° discípulos que participaron de los 365 días con el espíritu santo</td>
+              <td className="sticky left-0 bg-foreground/[0.02] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">6</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° discípulos que participaron de los 365 días con el espíritu santo</td>
               {SABADOS.map((s) => {
                 const cerrado = sabadosCerrados.has(s);
                 return (
@@ -348,8 +348,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.03]">
-              <td className="sticky left-0 bg-foreground/[0.03] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">7</td>
-              <td className="sticky left-[40px] bg-foreground/[0.03] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">Ofrenda</td>
+              <td className="sticky left-0 bg-foreground/[0.03] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">7</td>
+              <td className="sticky left-[40px] bg-foreground/[0.03] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">Ofrenda</td>
               {SABADOS.map((s) => {
                 const cerrado = sabadosCerrados.has(s);
                 return (
@@ -368,8 +368,8 @@ export function AsistenciaClient({
               })}
             </tr>
             <tr className="bg-foreground/[0.02]">
-              <td className="sticky left-0 bg-foreground/[0.02] px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">8</td>
-              <td className="sticky left-[40px] bg-foreground/[0.02] px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-xs">N° visitas</td>
+              <td className="sticky left-0 bg-foreground/[0.02] z-10 px-2 py-1.5 border-r border-foreground/10 text-center text-foreground/50 text-[10px]">8</td>
+              <td className="sticky left-[40px] bg-foreground/[0.02] z-10 px-2 py-1.5 text-foreground/70 border-r border-foreground/10 text-[10px] md:text-xs leading-tight min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none whitespace-normal break-words">N° visitas</td>
               {SABADOS.map((s) => {
                 const cerrado = sabadosCerrados.has(s);
                 return (

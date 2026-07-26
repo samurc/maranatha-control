@@ -408,7 +408,9 @@ export function EstudiosClient({ instructores, estudiantes, avances, participant
       {/* ---- Lista de estudiantes con Editar y Eliminar ---- */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Estudiantes de la Biblia</h2>
-        <div className="overflow-x-auto rounded-lg border border-foreground/10">
+        
+        {/* Tabla (Desktop) */}
+        <div className="hidden md:block overflow-x-auto rounded-lg border border-foreground/10">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
@@ -451,6 +453,56 @@ export function EstudiosClient({ instructores, estudiantes, avances, participant
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Tarjetas (Mobile) */}
+        <div className="md:hidden space-y-4">
+          {estudiantes.map((est) => {
+            const instructor = est.instructorId ? instructorMap.get(est.instructorId) : null;
+            return (
+              <div key={est.id} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 space-y-3">
+                <div className="flex justify-between items-start border-b border-foreground/5 pb-3">
+                  <div>
+                    <p className="font-medium text-foreground text-sm">{est.nombre} {est.apellido}</p>
+                    <p className="text-xs text-foreground/60 mt-1">Instructor: {instructor?.nombre ?? "—"}</p>
+                  </div>
+                  {est.candidatoBautismo && (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-400">
+                      Candidato
+                    </span>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-foreground/40 block mb-0.5">Curso</span>
+                    <span className="text-foreground/70">{est.cursoBiblico ? CURSO_LABELS[est.cursoBiblico] ?? est.cursoBiblico : "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-foreground/40 block mb-0.5">Grupo</span>
+                    <span className="text-foreground/70">{est.grupoEtareo ? GRUPO_ETAREO_LABELS[est.grupoEtareo] ?? est.grupoEtareo : "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-foreground/40 block mb-0.5">E. Civil</span>
+                    <span className="text-foreground/70">{est.estadoCivil ? ESTADO_CIVIL_LABELS[est.estadoCivil] ?? est.estadoCivil : "—"}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-3 border-t border-foreground/5 mt-3">
+                  <ModalEditarEstudiante est={est} instructores={instructores} />
+                  <ConfirmDeleteButton
+                    entityName={`${est.nombre} ${est.apellido}`}
+                    onConfirm={() => { const fd = new FormData(); fd.set("id", est.id); eliminarEstudianteBiblico(fd); }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          {estudiantes.length === 0 && (
+            <div className="p-8 text-center text-sm text-foreground/50 border border-foreground/10 rounded-lg">
+              Sin estudiantes registrados
+            </div>
+          )}
         </div>
       </div>
     </div>
