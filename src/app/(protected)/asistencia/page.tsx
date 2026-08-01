@@ -42,6 +42,7 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
     nombre: d.data().nombre as string,
     apellido: d.data().apellido as string,
     fechaNacimiento: (d.data().fechaNacimiento as string) ?? "",
+    fotoUrl: d.data().fotoUrl as string | undefined,
   }));
 
   // Obtener nombre de unidad e iglesia

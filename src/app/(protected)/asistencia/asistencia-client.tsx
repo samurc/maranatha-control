@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { guardarAsistencia } from "./actions";
+import { ModalAsistenciaMobile } from "./modal-asistencia-mobile";
 
 interface Participante {
   id: string;
   nombre: string;
   apellido: string;
   fechaNacimiento: string;
+  fotoUrl?: string;
 }
 
 // Celda de la grilla: presente + días de estudio combinados
@@ -87,6 +89,22 @@ export function AsistenciaClient({
 
   const [, startTransition] = useTransition();
   const [indicadores, setIndicadores] = useState<Record<string, string>>(indicadoresExistentes);
+
+  const [celdaMobile, setCeldaMobile] = useState<{ pIdx: number, sabado: number } | null>(null);
+
+  const avanzarAlumno = (actualIdx: number) => {
+    if (actualIdx < participantes.length - 1) {
+      setCeldaMobile(prev => prev ? { ...prev, pIdx: actualIdx + 1 } : null);
+    } else {
+      setCeldaMobile(null); // Cerrar si es el último
+    }
+  };
+
+  const retrocederAlumno = (actualIdx: number) => {
+    if (actualIdx > 0) {
+      setCeldaMobile(prev => prev ? { ...prev, pIdx: actualIdx - 1 } : null);
+    }
+  };
 
   function actualizarCelda(participanteId: string, sabado: number, valor: CeldaValor) {
     setGrilla((prev) => ({
@@ -194,6 +212,19 @@ export function AsistenciaClient({
                         data-col={s}
                         value={valor}
                         readOnly={cerrado}
+                        onClick={(e) => {
+                          if (cerrado) return;
+                          if (window.innerWidth < 768) {
+                            e.preventDefault();
+                            e.currentTarget.blur();
+                            setCeldaMobile({ pIdx: idx, sabado: s });
+                          }
+                        }}
+                        onFocus={(e) => {
+                          if (window.innerWidth < 768) {
+                            e.currentTarget.blur();
+                          }
+                        }}
                         onChange={(e) => {
                           if (cerrado) return;
                           let v = e.target.value.toUpperCase();
@@ -394,6 +425,21 @@ export function AsistenciaClient({
           </tfoot>
         </table>
       </div>
+
+      {celdaMobile && (
+        <ModalAsistenciaMobile
+          participantes={participantes}
+          participanteActivoIdx={celdaMobile.pIdx}
+          sabado={celdaMobile.sabado}
+          onClose={() => setCeldaMobile(null)}
+          onSelect={(pIdx, val) => {
+            const pid = participantes[pIdx]?.id;
+            if (pid) actualizarCelda(pid, celdaMobile.sabado, val);
+          }}
+          onAvanzar={avanzarAlumno}
+          onRetroceder={retrocederAlumno}
+        />
+      )}
     </div>
   );
 }
