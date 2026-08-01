@@ -6,6 +6,7 @@ export interface ModalAsistenciaMobileProps {
   participantes: { id: string; nombre: string; apellido: string; fotoUrl?: string }[];
   participanteActivoIdx: number;
   sabado: number;
+  valorActual: string;
   onClose: () => void;
   onSelect: (pIdx: number, valor: string) => void;
   // Avanza al siguiente alumno (o null si es el último)
@@ -18,6 +19,7 @@ export function ModalAsistenciaMobile({
   participantes,
   participanteActivoIdx,
   sabado,
+  valorActual,
   onClose,
   onSelect,
   onAvanzar,
@@ -131,18 +133,35 @@ export function ModalAsistenciaMobile({
 
         {/* Opciones */}
         <div className="p-4 grid grid-cols-3 gap-3 bg-foreground/[0.02]">
-          {opciones.map(op => (
-            <button
-              key={op}
-              onClick={() => handleOptionClick(op)}
-              className={`
-                py-3 rounded-xl font-bold text-lg transition-transform active:scale-95 shadow-sm
-                ${op === "F" ? "bg-red-500 text-white hover:bg-red-600" : "bg-blue-500 text-white hover:bg-blue-600"}
-              `}
-            >
-              {op}
-            </button>
-          ))}
+          {opciones.map(op => {
+            const isSelected = valorActual === op;
+            let btnClass = "bg-transparent text-foreground border-2 border-foreground/20 hover:bg-foreground/5";
+            
+            if (isSelected) {
+              if (op === "F") {
+                btnClass = "bg-red-500 text-white border-red-500 shadow-md";
+              } else {
+                btnClass = "bg-blue-500 text-white border-blue-500 shadow-md";
+              }
+            }
+
+            return (
+              <button
+                key={op}
+                onClick={() => handleOptionClick(op)}
+                className={`py-3 rounded-xl font-bold text-lg transition-all active:scale-95 ${btnClass}`}
+              >
+                {op}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Preload photos para evitar retraso visual al cambiar */}
+        <div className="hidden">
+          {participantes.map(part => part.fotoUrl ? (
+            <img key={part.id} src={part.fotoUrl} alt="preload" />
+          ) : null)}
         </div>
       </div>
     </div>

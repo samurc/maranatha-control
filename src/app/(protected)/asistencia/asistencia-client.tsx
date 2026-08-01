@@ -431,6 +431,7 @@ export function AsistenciaClient({
           participantes={participantes}
           participanteActivoIdx={celdaMobile.pIdx}
           sabado={celdaMobile.sabado}
+          valorActual={grilla[participantes[celdaMobile.pIdx]?.id ?? ""]?.[`S${celdaMobile.sabado}`] ?? ""}
           onClose={() => setCeldaMobile(null)}
           onSelect={(pIdx, val) => {
             const pid = participantes[pIdx]?.id;
