@@ -149,7 +149,7 @@ export function AsistenciaClient({
           {nombreIglesia} — {nombreUnidad} — {trimestre}° Trimestre {anio}
         </p>
         <p className="mt-1 text-xs text-foreground/40">
-          Anotar &quot;P&quot; + número de días que estudió la lección (Ej: P7) y &quot;F&quot; si faltó
+          Anotar el número de días que estudió la lección (Ej: 7) o &quot;F&quot; si faltó
         </p>
       </div>
 
@@ -196,7 +196,11 @@ export function AsistenciaClient({
                         readOnly={cerrado}
                         onChange={(e) => {
                           if (cerrado) return;
-                          const v = e.target.value.toUpperCase();
+                          let v = e.target.value.toUpperCase();
+                          // Si el usuario ingresa un número del 0 al 7 directamente, anteponemos la "P"
+                          if (/^[0-7]$/.test(v)) {
+                            v = "P" + v;
+                          }
                           // Validar: vacío, F, o P seguido de 0-7
                           if (v === "" || v === "F" || v === "P" || /^P[0-7]$/.test(v)) {
                             actualizarCelda(p.id, s, v);
