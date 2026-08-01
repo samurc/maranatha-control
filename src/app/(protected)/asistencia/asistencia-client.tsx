@@ -115,10 +115,34 @@ export function AsistenciaClient({
       },
     }));
 
-    // Autoguardar cuando el valor es completo (F o P0-P7)
+    // Si el valor es vacío, enviar borrado de forma individual
+    if (valor === "") {
+      // Guardar solo este registro
+      guardarRegistroIndividual(participanteId, sabado, valor);
+      return;
+    }
+
+    // Autoguardar cuando el valor es completo (F, P0-P7)
     if (valor === "F" || /^P[0-7]$/.test(valor)) {
       guardarSabado(sabado, { ...grilla, [participanteId]: { ...grilla[participanteId], [`S${sabado}`]: valor } });
     }
+  }
+
+  function guardarRegistroIndividual(participanteId: string, sabado: number, valor: CeldaValor) {
+    const asistencia = valor === "" ? {} : { [participanteId]: celdaAValor(valor) };
+    const formData = new FormData();
+    formData.set("data", JSON.stringify({
+      iglesiaId,
+      unidadId,
+      anio,
+      trimestre,
+      sabado,
+      asistencia,
+    }));
+
+    startTransition(async () => {
+      await guardarAsistencia(formData);
+    });
   }
 
   function actualizarIndicador(clave: string, valor: string) {
@@ -137,7 +161,8 @@ export function AsistenciaClient({
     const asistencia: Record<string, { presente: boolean; diasEstudio: number }> = {};
     for (const p of participantes) {
       const celda = datos[p.id]?.[clave];
-      if (celda && celda !== "" && (celda === "F" || /^P[0-7]$/.test(celda))) {
+      if (celda !== undefined) {
+        // Include even empty string to signal deletion
         asistencia[p.id] = celdaAValor(celda);
       }
     }

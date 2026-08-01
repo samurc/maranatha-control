@@ -215,6 +215,15 @@ export function ModalAsistenciaMobile({
           );
         })}
       </div>
+      
+      <div className="p-2 flex justify-center">
+        <button
+          onClick={() => onSelect(participanteActivoIdx, "")}
+          className="py-2 px-4 rounded-xl border-2 border-foreground/20 text-foreground hover:bg-foreground/5"
+        >
+          Borrar
+        </button>
+      </div>
     </>
   );
 
