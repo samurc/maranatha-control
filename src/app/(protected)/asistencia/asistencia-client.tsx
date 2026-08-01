@@ -432,6 +432,7 @@ export function AsistenciaClient({
           participanteActivoIdx={celdaMobile.pIdx}
           sabado={celdaMobile.sabado}
           valorActual={grilla[participantes[celdaMobile.pIdx]?.id ?? ""]?.[`S${celdaMobile.sabado}`] ?? ""}
+          indicadores={indicadores}
           onClose={() => setCeldaMobile(null)}
           onSelect={(pIdx, val) => {
             const pid = participantes[pIdx]?.id;
@@ -439,6 +440,7 @@ export function AsistenciaClient({
           }}
           onAvanzar={avanzarAlumno}
           onRetroceder={retrocederAlumno}
+          onUpdateIndicador={actualizarIndicador}
         />
       )}
     </div>
