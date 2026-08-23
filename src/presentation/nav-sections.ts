@@ -77,5 +77,10 @@ export function construirMenuNavegacion(
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Estudios Bíblicos", href: "/estudios-biblicos" });
   }
 
+  // "Encargados" visible solo para secretario
+  if (claims.role === "secretario") {
+    items.push({ resource: "datos_personales" as Resource, etiqueta: "Encargados", href: "/encargados" });
+  }
+
   return items;
 }
