@@ -76,9 +76,12 @@ function construirTabla(
   // Lienzo horizontal (A4 apaisado @96dpi). Ancho fijo para orientación
   // apaisada uniforme; alto mínimo de hoja pero puede crecer si una mitad
   // tiene muchas filas, evitando cortar contenido.
+  // Color azul en lugar de negro (la impresora no tiene tinta negra).
+  const AZUL = "#1d4ed8";
+
   const contenedor = document.createElement("div");
   contenedor.style.cssText =
-    "background:#ffffff;color:#111827;padding:32px 40px;font-family:Arial,Helvetica,sans-serif;" +
+    `background:#ffffff;color:${AZUL};padding:32px 40px;font-family:Arial,Helvetica,sans-serif;` +
     "width:1123px;min-height:794px;box-sizing:border-box;display:flex;flex-direction:column;";
 
   // Encabezado
@@ -86,17 +89,18 @@ function construirTabla(
   titulo.style.cssText = "margin-bottom:12px;";
   const parteSufijo = parteInfo ? ` — Parte ${parteInfo.parte} de ${parteInfo.total}` : "";
   titulo.innerHTML =
-    `<div style="font-size:18px;font-weight:700;">Control de Asistencia y Estudio Diario${parteSufijo}</div>` +
-    `<div style="font-size:13px;color:#4b5563;margin-top:2px;">${nombreIglesia} — ${nombreUnidad} — ${trimestre}° Trimestre ${anio}</div>`;
+    `<div style="font-size:18px;font-weight:700;color:${AZUL};">Control de Asistencia y Estudio Diario${parteSufijo}</div>` +
+    `<div style="font-size:13px;color:${AZUL};margin-top:2px;">${nombreIglesia} — ${nombreUnidad} — ${trimestre}° Trimestre ${anio}</div>`;
   contenedor.appendChild(titulo);
 
   const tabla = document.createElement("table");
-  tabla.style.cssText = "border-collapse:collapse;font-size:12px;width:100%;table-layout:fixed;";
+  tabla.style.cssText = `border-collapse:collapse;font-size:12px;width:100%;table-layout:fixed;color:${AZUL};`;
 
-  const th = "border:1px solid #d1d5db;padding:6px 4px;background:#f3f4f6;font-weight:600;text-align:center;";
-  const thLeft = "border:1px solid #d1d5db;padding:6px 8px;background:#f3f4f6;font-weight:600;text-align:left;";
-  const td = "border:1px solid #e5e7eb;padding:5px 4px;text-align:center;";
-  const tdLeft = "border:1px solid #e5e7eb;padding:5px 8px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+  // Bordes azules, sin colores de fondo en las celdas.
+  const th = `border:1px solid ${AZUL};padding:6px 4px;font-weight:600;text-align:center;color:${AZUL};`;
+  const thLeft = `border:1px solid ${AZUL};padding:6px 8px;font-weight:600;text-align:left;color:${AZUL};`;
+  const td = `border:1px solid ${AZUL};padding:5px 4px;text-align:center;color:${AZUL};`;
+  const tdLeft = `border:1px solid ${AZUL};padding:5px 8px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${AZUL};`;
 
   // Anchos fijos de columna para un layout apaisado uniforme
   const colgroup = document.createElement("colgroup");
@@ -121,8 +125,7 @@ function construirTabla(
     const celdas = SABADOS.map((s) => {
       const v = grilla[p.id]?.[`S${s}`] ?? "";
       const texto = celdaTexto(v);
-      const bg = v === "F" ? "background:#fee2e2;" : v.startsWith("P") ? "background:#dbeafe;" : "";
-      return `<td style="${td}${bg}">${texto}</td>`;
+      return `<td style="${td}">${texto}</td>`;
     }).join("");
     tr.innerHTML =
       `<td style="${td}">${offsetNumeracion + idx + 1}</td>` +
@@ -148,13 +151,13 @@ function construirTabla(
         } else {
           texto = indicadores[`${ind.clave}-${s}`] ?? "";
         }
-        return `<td style="${td}background:#f9fafb;">${texto}</td>`;
+        return `<td style="${td}">${texto}</td>`;
       }).join("");
       const tdLabel =
-        "border:1px solid #e5e7eb;padding:5px 8px;text-align:left;background:#f3f4f6;" +
+        `border:1px solid ${AZUL};padding:5px 8px;text-align:left;color:${AZUL};` +
         "font-weight:600;white-space:normal;word-break:break-word;line-height:1.15;font-size:10px;";
       tr.innerHTML =
-        `<td style="${td}background:#f3f4f6;"></td>` +
+        `<td style="${td}"></td>` +
         `<td style="${tdLabel}">${ind.label}</td>` +
         valores;
       tfoot.appendChild(tr);
