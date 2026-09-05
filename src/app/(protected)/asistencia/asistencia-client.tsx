@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { guardarAsistencia } from "./actions";
 import { ModalAsistenciaMobile } from "./modal-asistencia-mobile";
+import { exportarAsistenciaImagen } from "./exportar-imagen";
 
 interface Participante {
   id: string;
@@ -91,6 +92,27 @@ export function AsistenciaClient({
   const [indicadores, setIndicadores] = useState<Record<string, string>>(indicadoresExistentes);
 
   const [celdaMobile, setCeldaMobile] = useState<{ pIdx: number, sabado: number } | null>(null);
+  const [exportando, setExportando] = useState(false);
+
+  async function handleExportar() {
+    setExportando(true);
+    try {
+      await exportarAsistenciaImagen({
+        participantes,
+        grilla,
+        indicadores,
+        nombreIglesia,
+        nombreUnidad,
+        trimestre,
+        anio,
+      });
+    } catch (err) {
+      console.error("Error al exportar la imagen:", err);
+      alert("No se pudo generar la imagen. Intenta de nuevo.");
+    } finally {
+      setExportando(false);
+    }
+  }
 
   const avanzarAlumno = (actualIdx: number) => {
     if (actualIdx < participantes.length - 1) {
@@ -186,14 +208,41 @@ export function AsistenciaClient({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Control de Asistencia y Estudio Diario</h1>
-        <p className="mt-1 text-sm text-foreground/60">
-          {nombreIglesia} — {nombreUnidad} — {trimestre}° Trimestre {anio}
-        </p>
-        <p className="mt-1 text-xs text-foreground/40">
-          Anotar el número de días que estudió la lección (Ej: 7) o &quot;F&quot; si faltó
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Control de Asistencia y Estudio Diario</h1>
+          <p className="mt-1 text-sm text-foreground/60">
+            {nombreIglesia} — {nombreUnidad} — {trimestre}° Trimestre {anio}
+          </p>
+          <p className="mt-1 text-xs text-foreground/40">
+            Anotar el número de días que estudió la lección (Ej: 7) o &quot;F&quot; si faltó
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportar}
+          disabled={exportando || participantes.length === 0}
+          className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {exportando ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Generando…
+            </>
+          ) : (
+            <>
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Exportar
+            </>
+          )}
+        </button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-foreground/10">
