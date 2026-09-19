@@ -8,6 +8,7 @@ interface Participante {
   id: string;
   nombre: string;
   apellido: string;
+  genero?: string;
   esVisita: boolean;
   estado?: string;
   fechaNacimiento?: string;
@@ -17,11 +18,16 @@ interface Participante {
   direccion?: string;
   comentario?: string;
   fotoUrl?: string;
+  himnoFavorito?: string;
 }
 
 interface EditarParticipanteFormProps {
   participante: Participante;
   action: (formData: FormData) => void;
+  /** Contenido del disparador. Si se omite, se usa el botón de texto "Editar". */
+  trigger?: React.ReactNode;
+  /** Clases del elemento disparador cuando se usa `trigger`. */
+  triggerClassName?: string;
 }
 
 function validarFechaDDMM(valor: string): boolean {
@@ -53,12 +59,13 @@ function SubmitBtn({ disabled }: { disabled: boolean }) {
   );
 }
 
-export function EditarParticipanteForm({ participante, action }: EditarParticipanteFormProps) {
+export function EditarParticipanteForm({ participante, action, trigger, triggerClassName }: EditarParticipanteFormProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [nombre, setNombre] = useState(participante.nombre);
   const [apellido, setApellido] = useState(participante.apellido);
+  const [genero, setGenero] = useState(participante.genero ?? "");
   const [fechaNacimiento, setFechaNacimiento] = useState(participante.fechaNacimiento ?? "");
-  
+
   // Image Upload States
   const [fotoUrl, setFotoUrl] = useState(participante.fotoUrl ?? "");
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -68,6 +75,7 @@ export function EditarParticipanteForm({ participante, action }: EditarParticipa
   const camposValidos =
     nombre.trim().length > 0 &&
     apellido.trim().length > 0 &&
+    (genero === "hombre" || genero === "mujer") &&
     validarFechaDDMM(fechaNacimiento);
 
   async function handleAction(formData: FormData) {
@@ -95,16 +103,16 @@ export function EditarParticipanteForm({ participante, action }: EditarParticipa
   const handleCropDone = async (croppedBlob: Blob) => {
     setImageToCrop(null);
     setIsUploading(true);
-    
+
     try {
       // Dynamic import to avoid loading Firebase on initial render if not needed
       const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
       const { obtenerFirebaseStorageCliente } = await import("../../infrastructure/firebase-storage-client");
-      
+
       const storage = obtenerFirebaseStorageCliente();
       const filename = `participantes/${participante.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, filename);
-      
+
       await uploadBytes(storageRef, croppedBlob);
       const url = await getDownloadURL(storageRef);
       setFotoUrl(url);
@@ -118,13 +126,30 @@ export function EditarParticipanteForm({ participante, action }: EditarParticipa
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => dialogRef.current?.showModal()}
-        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-      >
-        Editar
-      </button>
+      {trigger !== undefined ? (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={() => dialogRef.current?.showModal()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              dialogRef.current?.showModal();
+            }
+          }}
+          className={`cursor-pointer ${triggerClassName ?? "text-left"}`}
+        >
+          {trigger}
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.showModal()}
+          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          Editar
+        </button>
+      )}
 
       <dialog
         ref={dialogRef}
@@ -145,7 +170,7 @@ export function EditarParticipanteForm({ participante, action }: EditarParticipa
 
           <form action={handleAction} className="space-y-6">
             <input type="hidden" name="id" value={participante.id} />
-            
+
             {/* Sección de Foto */}
             <div className="flex flex-col items-center sm:flex-row sm:items-start gap-4 p-4 border border-foreground/10 rounded-xl bg-foreground/[0.02]">
               <div className="relative">
@@ -227,6 +252,22 @@ export function EditarParticipanteForm({ participante, action }: EditarParticipa
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-foreground/80">
+                  Género <span className="text-red-400">*</span>
+                </label>
+                <select
+                  name="genero"
+                  required
+                  value={genero}
+                  onChange={(e) => setGenero(e.target.value)}
+                  className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="hombre">Hombre</option>
+                  <option value="mujer">Mujer</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-foreground/80">
                   Fecha de nacimiento (DD-MM) <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -261,6 +302,10 @@ export function EditarParticipanteForm({ participante, action }: EditarParticipa
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-foreground/80">Dirección domiciliaria</label>
                 <input name="direccion" defaultValue={participante.direccion ?? ""} placeholder="Ej: Av. Principal 123" className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors" />
+              </div>
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="block text-sm font-medium text-foreground/80">Himno favorito</label>
+                <input name="himnoFavorito" defaultValue={participante.himnoFavorito ?? ""} placeholder="Ej: 334 - Firmes y adelante" className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors" />
               </div>
               <div className="md:col-span-2 space-y-1.5">
                 <label className="block text-sm font-medium text-foreground/80">Comentario</label>

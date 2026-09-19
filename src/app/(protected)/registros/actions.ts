@@ -169,3 +169,81 @@ export async function marcarContactoAusente(formData: FormData): Promise<void> {
 
   revalidatePath("/registros");
 }
+
+/**
+ * Resuelve y valida el registro objetivo para una operación sobre un PRESENTE.
+ * Análogo a `resolverAusenteValidado` pero exige `presente === true`.
+ */
+async function resolverPresenteValidado(
+  registroId: string,
+  participanteId: string
+): Promise<{
+  registroRef: FirebaseFirestore.DocumentReference;
+  registro: FirebaseFirestore.DocumentData;
+} | null> {
+  const claims = await obtenerClaimsDeSesion();
+  if (claims === null) return null;
+
+  const db = obtenerFirestoreAdmin();
+  const registroRef = db.collection("registros_sabaticos").doc(registroId);
+  const registroSnap = await registroRef.get();
+  if (!registroSnap.exists) return null;
+
+  const registro = registroSnap.data()!;
+
+  const esRolOperativo = claims.role === "secretario" || claims.role === "maestro";
+  if (esRolOperativo) {
+    if (claims.unidadId && registro.unidadId !== claims.unidadId) return null;
+    if (!claims.unidadId && claims.iglesiaId && registro.iglesiaId !== claims.iglesiaId) return null;
+  }
+
+  const asistencia = (registro.asistencia ?? {}) as Record<string, { presente?: boolean }>;
+  const entrada = asistencia[participanteId];
+  if (!entrada || entrada.presente !== true) return null;
+
+  return { registroRef, registro };
+}
+
+/**
+ * Guarda la cantidad de visitas que un Participante presente trajo a la clase.
+ * Se persiste embebido en `asistencia[participanteId].visitasTraidas`.
+ */
+export async function guardarVisitasTraidas(formData: FormData): Promise<void> {
+  const registroId = formData.get("registroId");
+  const participanteId = formData.get("participanteId");
+  const visitasRaw = formData.get("visitasTraidas");
+
+  if (typeof registroId !== "string" || registroId.length === 0) return;
+  if (typeof participanteId !== "string" || participanteId.length === 0) return;
+
+  // Normalizar a entero >= 0. Cadena vacía o inválida => 0.
+  const parsed = typeof visitasRaw === "string" ? Number.parseInt(visitasRaw, 10) : NaN;
+  const visitasTraidas = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+
+  const ctx = await resolverPresenteValidado(registroId, participanteId);
+  if (ctx === null) return;
+
+  // Recalcular el total de visitas del registro sumando `visitasTraidas` de
+  // todos los presentes, usando el valor recién editado para este participante.
+  const asistencia = (ctx.registro.asistencia ?? {}) as Record<
+    string,
+    { presente?: boolean; visitasTraidas?: number }
+  >;
+  let totalVisitas = 0;
+  for (const [pid, entrada] of Object.entries(asistencia)) {
+    if (entrada?.presente !== true) continue;
+    const v = pid === participanteId ? visitasTraidas : entrada.visitasTraidas;
+    if (typeof v === "number" && v > 0) totalVisitas += Math.floor(v);
+  }
+
+  await ctx.registroRef.set(
+    {
+      asistencia: { [participanteId]: { visitasTraidas } },
+      totalesRapidos: { visitas: totalVisitas },
+      actualizadoEn: new Date(),
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/registros");
+}

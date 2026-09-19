@@ -14,7 +14,7 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import type { CodigoEnlace, Participante } from "../../domain/entities/participante.entity";
+import type { CodigoEnlace, GeneroParticipante, Participante } from "../../domain/entities/participante.entity";
 import type { ParticipanteRepositoryPort } from "../../application/ports/participante.repository.port";
 
 const COLECCION = "participantes";
@@ -31,6 +31,7 @@ interface ParticipanteDocumento {
   readonly unidadId: string;
   readonly nombre: string;
   readonly apellido: string;
+  readonly genero?: GeneroParticipante;
   readonly esVisita: boolean;
   readonly esMenorEdad?: boolean;
   readonly estado: "activo" | "inactivo";
@@ -73,6 +74,7 @@ function aDocumento(participante: Participante): ParticipanteDocumento {
     unidadId: participante.unidadId,
     nombre: participante.nombre,
     apellido: participante.apellido,
+    genero: participante.genero,
     esVisita: participante.esVisita,
     esMenorEdad: participante.esMenorEdad,
     estado: participante.estado,
@@ -89,6 +91,7 @@ function aEntidad(id: string, data: ParticipanteDocumento): Participante {
     unidadId: data.unidadId,
     nombre: data.nombre,
     apellido: data.apellido,
+    genero: data.genero,
     esVisita: data.esVisita,
     esMenorEdad: data.esMenorEdad,
     estado: data.estado,
@@ -99,9 +102,8 @@ function aEntidad(id: string, data: ParticipanteDocumento): Participante {
 }
 
 export class FirestoreParticipanteRepository
-  implements ParticipanteRepositoryPort
-{
-  constructor(private readonly db: Firestore) {}
+  implements ParticipanteRepositoryPort {
+  constructor(private readonly db: Firestore) { }
 
   async findById(id: string): Promise<Participante | null> {
     const snapshot = await getDoc(doc(this.db, COLECCION, id));

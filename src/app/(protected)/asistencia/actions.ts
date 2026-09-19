@@ -37,7 +37,7 @@ export async function guardarAsistencia(formData: FormData) {
     anio: number;
     trimestre: number;
     sabado: number;
-    asistencia: Record<string, { presente: boolean; diasEstudio: number }>;
+    asistencia: Record<string, { presente: boolean; diasEstudio: number; justificado?: boolean }>;
   };
 
   const { iglesiaId, unidadId, anio, trimestre, sabado, asistencia } = payload;
@@ -65,6 +65,9 @@ export async function guardarAsistencia(formData: FormData) {
       autorregistrado: false,
       codigoVisual,
       seguimientoPastoral: [],
+      // Exonerar => falta justificada. Cualquier otro valor limpia la
+      // justificación (solo aplica a ausentes; los presentes nunca se justifican).
+      justificado: entry.presente ? false : entry.justificado === true,
     };
   }
 

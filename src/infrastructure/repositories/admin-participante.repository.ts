@@ -15,24 +15,25 @@ function aEntidad(id: string, data: FirebaseFirestore.DocumentData): Participant
     unidadId: data.unidadId,
     nombre: data.nombre,
     apellido: data.apellido,
+    genero: data.genero,
     esVisita: data.esVisita ?? false,
     esMenorEdad: data.esMenorEdad,
     estado: data.estado,
     userUid: data.userUid,
     codigoEnlace: data.codigoEnlace
       ? {
-          codigo: data.codigoEnlace.codigo,
-          usado: data.codigoEnlace.usado,
-          emitidoPor: data.codigoEnlace.emitidoPor,
-          emitidoEn: data.codigoEnlace.emitidoEn?.toDate() ?? new Date(),
-        }
+        codigo: data.codigoEnlace.codigo,
+        usado: data.codigoEnlace.usado,
+        emitidoPor: data.codigoEnlace.emitidoPor,
+        emitidoEn: data.codigoEnlace.emitidoEn?.toDate() ?? new Date(),
+      }
       : undefined,
     creadoEn: data.creadoEn?.toDate() ?? new Date(),
   };
 }
 
 export class AdminParticipanteRepository implements ParticipanteRepositoryPort {
-  constructor(private readonly db: Firestore) {}
+  constructor(private readonly db: Firestore) { }
 
   async findById(id: string): Promise<Participante | null> {
     const snap = await this.db.collection(COLECCION).doc(id).get();

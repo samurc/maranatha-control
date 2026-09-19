@@ -75,6 +75,7 @@ export function construirMenuNavegacion(
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Asistencia", href: "/asistencia" });
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Cumpleaños", href: "/cumpleanos" });
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Estudios Bíblicos", href: "/estudios-biblicos" });
+    items.push({ resource: "datos_personales" as Resource, etiqueta: "Oración Intercesora", href: "/oracion-intercesora" });
   }
 
   // "Encargados" visible solo para secretario

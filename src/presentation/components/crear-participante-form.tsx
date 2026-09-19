@@ -52,11 +52,13 @@ export function CrearParticipanteForm({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
+  const [genero, setGenero] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
 
   const camposValidos =
     nombre.trim().length > 0 &&
     apellido.trim().length > 0 &&
+    (genero === "hombre" || genero === "mujer") &&
     validarFechaDDMM(fechaNacimiento);
 
   async function handleAction(formData: FormData) {
@@ -64,6 +66,7 @@ export function CrearParticipanteForm({
     dialogRef.current?.close();
     setNombre("");
     setApellido("");
+    setGenero("");
     setFechaNacimiento("");
   }
 
@@ -130,6 +133,23 @@ export function CrearParticipanteForm({
                   placeholder="Ej: Pérez"
                   className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="genero" className="block text-sm font-medium text-foreground/80">
+                  Género <span className="text-red-400">*</span>
+                </label>
+                <select
+                  id="genero"
+                  name="genero"
+                  required
+                  value={genero}
+                  onChange={(e) => setGenero(e.target.value)}
+                  className="w-full rounded-lg border border-foreground/20 bg-background px-3.5 py-2.5 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="hombre">Hombre</option>
+                  <option value="mujer">Mujer</option>
+                </select>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="fechaNacimiento" className="block text-sm font-medium text-foreground/80">

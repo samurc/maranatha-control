@@ -33,14 +33,14 @@ export default async function EncargadosPage(): Promise<React.JSX.Element> {
   // Participantes activos acotados por unidad (o iglesia si no hay unidad).
   const participantesQuery = claims.unidadId
     ? db
-        .collection("participantes")
-        .where("unidadId", "==", claims.unidadId)
-        .where("estado", "==", "activo")
+      .collection("participantes")
+      .where("unidadId", "==", claims.unidadId)
+      .where("estado", "==", "activo")
     : claims.iglesiaId
       ? db
-          .collection("participantes")
-          .where("iglesiaId", "==", claims.iglesiaId)
-          .where("estado", "==", "activo")
+        .collection("participantes")
+        .where("iglesiaId", "==", claims.iglesiaId)
+        .where("estado", "==", "activo")
       : null;
 
   if (!participantesQuery) {
@@ -87,13 +87,14 @@ export default async function EncargadosPage(): Promise<React.JSX.Element> {
 
   const encargadosQuery = claims.unidadId
     ? db
-        .collection("encargados")
-        .where("iglesiaId", "==", claims.iglesiaId)
-        .where("unidadId", "==", unidadKey)
+      .collection("encargados")
+      .where("iglesiaId", "==", claims.iglesiaId)
+      .where("unidadId", "==", unidadKey)
     : db.collection("encargados").where("iglesiaId", "==", claims.iglesiaId);
 
   const asignacionesIniciales: Record<string, string> = {};
   const estadosIniciales: Record<string, EstadoSabado> = {};
+  const himnosIniciales: Record<string, { inicial: string; final: string }> = {};
   const encargadosSnap = await encargadosQuery.get();
   for (const doc of encargadosSnap.docs) {
     const data = doc.data();
@@ -106,6 +107,15 @@ export default async function EncargadosPage(): Promise<React.JSX.Element> {
       if (estado === "por_confirmar" || estado === "confirmado") {
         estadosIniciales[fechaISO] = estado;
       }
+      continue;
+    }
+
+    // Documento de himnos del sábado.
+    if (data.tipo === "himnos") {
+      himnosIniciales[fechaISO] = {
+        inicial: (data.himnoInicial as string | null) ?? "",
+        final: (data.himnoFinal as string | null) ?? "",
+      };
       continue;
     }
 
@@ -125,6 +135,7 @@ export default async function EncargadosPage(): Promise<React.JSX.Element> {
       nombreIglesia={nombreIglesia}
       asignacionesIniciales={asignacionesIniciales}
       estadosIniciales={estadosIniciales}
+      himnosIniciales={himnosIniciales}
     />
   );
 }

@@ -167,6 +167,36 @@ export function AsistenciaClient({
     });
   }
 
+  /**
+   * Exonerar: registra al participante como falta (F) y además lo marca como
+   * justificado, de modo que en /registros aparezca en la lista "Justificados".
+   */
+  function exonerar(participanteId: string, sabado: number) {
+    setGrilla((prev) => ({
+      ...prev,
+      [participanteId]: { ...prev[participanteId], [`S${sabado}`]: "F" },
+    }));
+    const formData = new FormData();
+    formData.set("data", JSON.stringify({
+      iglesiaId,
+      unidadId,
+      anio,
+      trimestre,
+      sabado,
+      asistencia: { [participanteId]: { presente: false, diasEstudio: 0, justificado: true } },
+    }));
+    startTransition(async () => {
+      await guardarAsistencia(formData);
+    });
+  }
+
+  /** Abre el modal (antes solo mobile) en el primer participante y el primer sábado no cerrado. */
+  function abrirModal() {
+    if (participantes.length === 0) return;
+    const sabadoAbierto = SABADOS.find((s) => !sabadosCerrados.has(s)) ?? SABADOS[SABADOS.length - 1]!;
+    setCeldaMobile({ pIdx: 0, sabado: sabadoAbierto });
+  }
+
   function actualizarIndicador(clave: string, valor: string) {
     setIndicadores((prev) => ({ ...prev, [clave]: valor }));
     // Autoguardar indicador
@@ -218,31 +248,48 @@ export function AsistenciaClient({
             Anotar el número de días que estudió la lección (Ej: 7) o &quot;F&quot; si faltó
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleExportar}
-          disabled={exportando || participantes.length === 0}
-          className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {exportando ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              Generando…
-            </>
-          ) : (
-            <>
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Exportar
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          <button
+            type="button"
+            onClick={abrirModal}
+            disabled={participantes.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+            title="Registrar asistencia participante por participante"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Por participante
+          </button>
+          <button
+            type="button"
+            onClick={handleExportar}
+            disabled={exportando || participantes.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {exportando ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Generando…
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Exportar
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-foreground/10">
@@ -252,9 +299,8 @@ export function AsistenciaClient({
               <th className="sticky left-0 bg-foreground/[0.05] z-10 px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[40px]">#</th>
               <th className="sticky left-[40px] bg-foreground/[0.05] z-10 px-2 py-2 text-left font-semibold text-foreground/80 border-r border-foreground/10 min-w-[120px] max-w-[120px] md:min-w-[180px] md:max-w-none truncate">Nombre y apellido</th>
               {SABADOS.map((s) => (
-                <th key={s} className={`px-1 py-2 text-center font-semibold min-w-[42px] border-l border-foreground/5 ${
-                  sabadosCerrados.has(s) ? "text-foreground/30" : "text-foreground/70"
-                }`}>
+                <th key={s} className={`px-1 py-2 text-center font-semibold min-w-[42px] border-l border-foreground/5 ${sabadosCerrados.has(s) ? "text-foreground/30" : "text-foreground/70"
+                  }`}>
                   {s}°
                   {sabadosCerrados.has(s) && (
                     <span className="block text-[8px] text-foreground/25 leading-none">🔒</span>
@@ -323,15 +369,14 @@ export function AsistenciaClient({
                             nextInput?.select();
                           }
                         }}
-                        className={`w-full h-7 text-center text-xs font-medium rounded border transition-colors outline-none ${
-                          cerrado
-                            ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed"
-                            : esPresente
-                              ? "bg-blue-500/10 border-blue-500/30 text-blue-400 focus:ring-1 focus:ring-blue-500/50"
-                              : esFalta
-                                ? "bg-red-500/10 border-red-500/30 text-red-400 focus:ring-1 focus:ring-blue-500/50"
-                                : "bg-background border-foreground/10 text-foreground/60 focus:ring-1 focus:ring-blue-500/50"
-                        }`}
+                        className={`w-full h-7 text-center text-xs font-medium rounded border transition-colors outline-none ${cerrado
+                          ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed"
+                          : esPresente
+                            ? "bg-blue-500/10 border-blue-500/30 text-blue-400 focus:ring-1 focus:ring-blue-500/50"
+                            : esFalta
+                              ? "bg-red-500/10 border-red-500/30 text-red-400 focus:ring-1 focus:ring-blue-500/50"
+                              : "bg-background border-foreground/10 text-foreground/60 focus:ring-1 focus:ring-blue-500/50"
+                          }`}
                         placeholder={cerrado ? "" : "—"}
                       />
                     </td>
@@ -511,6 +556,10 @@ export function AsistenciaClient({
           onSelect={(pIdx, val) => {
             const pid = participantes[pIdx]?.id;
             if (pid) actualizarCelda(pid, celdaMobile.sabado, val);
+          }}
+          onExonerar={(pIdx) => {
+            const pid = participantes[pIdx]?.id;
+            if (pid) exonerar(pid, celdaMobile.sabado);
           }}
           onAvanzar={avanzarAlumno}
           onRetroceder={retrocederAlumno}

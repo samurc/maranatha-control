@@ -141,6 +141,50 @@ export async function establecerEstadoSabado(formData: FormData): Promise<void> 
   revalidatePath("/encargados");
 }
 
+function idHimnos(iglesiaId: string, unidadId: string, fechaISO: string): string {
+  return `${iglesiaId}_${unidadId}_${fechaISO}_himnos`;
+}
+
+/**
+ * Guarda el himno inicial y/o final de un sábado dentro del alcance del
+ * secretario. Se persiste en un documento `tipo: "himnos"` de la colección
+ * `encargados`, análogo al documento de estado.
+ */
+export async function guardarHimnosSabado(formData: FormData): Promise<void> {
+  const claims = await obtenerClaimsDeSesion();
+  if (claims === null || claims.role !== "secretario") {
+    throw new Error("No autorizado");
+  }
+  const alcance = alcanceDe(claims);
+  if (alcance === null) {
+    throw new Error("El secretario no tiene una iglesia asignada");
+  }
+
+  const fechaISO = String(formData.get("fechaISO") ?? "");
+  if (!FECHA_ISO_RE.test(fechaISO)) throw new Error("Fecha inválida");
+
+  const himnoInicial = String(formData.get("himnoInicial") ?? "").trim();
+  const himnoFinal = String(formData.get("himnoFinal") ?? "").trim();
+
+  const db = obtenerFirestoreAdmin();
+  const docId = idHimnos(alcance.iglesiaId, alcance.unidadId, fechaISO);
+  await db.collection("encargados").doc(docId).set(
+    {
+      iglesiaId: alcance.iglesiaId,
+      unidadId: alcance.unidadId,
+      fechaISO,
+      tipo: "himnos",
+      himnoInicial: himnoInicial.length > 0 ? himnoInicial : null,
+      himnoFinal: himnoFinal.length > 0 ? himnoFinal : null,
+      actualizadoPor: claims.uid,
+      actualizadoEn: new Date(),
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/encargados");
+}
+
 /**
  * Mueve o intercambia la asignación entre dos casilleros en una sola
  * operación atómica (batch), con una única revalidación.
@@ -281,13 +325,13 @@ export async function exportarRolExcel(): Promise<string> {
   // Nombres de participantes activos dentro del alcance.
   const participantesQuery = claims.unidadId
     ? db
-        .collection("participantes")
-        .where("unidadId", "==", claims.unidadId)
-        .where("estado", "==", "activo")
+      .collection("participantes")
+      .where("unidadId", "==", claims.unidadId)
+      .where("estado", "==", "activo")
     : db
-        .collection("participantes")
-        .where("iglesiaId", "==", alcance.iglesiaId)
-        .where("estado", "==", "activo");
+      .collection("participantes")
+      .where("iglesiaId", "==", alcance.iglesiaId)
+      .where("estado", "==", "activo");
   const participantesSnap = await participantesQuery.get();
   const nombrePorId = new Map<string, string>();
   for (const doc of participantesSnap.docs) {
@@ -302,9 +346,9 @@ export async function exportarRolExcel(): Promise<string> {
   // Asignaciones y estados existentes en el alcance.
   const encargadosQuery = claims.unidadId
     ? db
-        .collection("encargados")
-        .where("iglesiaId", "==", alcance.iglesiaId)
-        .where("unidadId", "==", alcance.unidadId)
+      .collection("encargados")
+      .where("iglesiaId", "==", alcance.iglesiaId)
+      .where("unidadId", "==", alcance.unidadId)
     : db.collection("encargados").where("iglesiaId", "==", alcance.iglesiaId);
 
   const asignaciones: Record<string, string> = {};

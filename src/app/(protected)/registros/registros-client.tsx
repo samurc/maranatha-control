@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { exportarAsignacionesImagen } from "./exportar-asignaciones-imagen";
 
 export interface AusenteVista {
   readonly participanteId: string;
@@ -10,11 +11,17 @@ export interface AusenteVista {
   readonly justificado: boolean;
   /** null = sin definir, true = contactado, false = sin contactar. */
   readonly contactado: boolean | null;
+  /** "hombre" | "mujer" | null (sin definir). */
+  readonly genero: string | null;
+  /** Celular del ausente para contactarlo (o null). */
+  readonly celular: string | null;
 }
 
 export interface ParticipanteOpcion {
   readonly id: string;
   readonly nombre: string;
+  /** "hombre" | "mujer" | null (sin definir). */
+  readonly genero: string | null;
 }
 
 interface AusentesCellProps {
@@ -72,6 +79,7 @@ export function AusentesCell({
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("");
+  const [generandoImagen, setGenerandoImagen] = useState(false);
 
   const nombrePorId = useMemo(() => {
     const m = new Map<string, string>();
@@ -154,6 +162,108 @@ export function AusentesCell({
       await marcarContacto(fd);
       setGuardandoId(null);
     });
+  }
+
+  /**
+   * Asigna responsables de forma aleatoria a los ausentes no justificados que
+   * aún no tienen responsable, usando participantes activos disponibles (no
+   * ausentes y no ya asignados) sin repetir.
+   */
+  function asignarAleatorio() {
+    // Objetivos: ausentes no justificados y sin responsable.
+    const objetivos = ausentes.filter((a) => {
+      const f = estado[a.participanteId];
+      return !(f?.justificado ?? false) && !(f?.responsableId ?? null);
+    });
+    if (objetivos.length === 0) return;
+
+    // Disponibles: activos no ausentes y no ya asignados como responsable,
+    // agrupados por género para emparejar hombre→hombre y mujer→mujer.
+    const yaAsignados = new Set(
+      Object.values(estado)
+        .map((f) => f.responsableId)
+        .filter((r): r is string => r != null)
+    );
+    const disponiblesPorGenero = new Map<string, string[]>();
+    for (const p of participantesActivos) {
+      if (idsAusentes.has(p.id) || yaAsignados.has(p.id)) continue;
+      if (p.genero !== "hombre" && p.genero !== "mujer") continue; // sin género => no se empareja
+      const lista = disponiblesPorGenero.get(p.genero) ?? [];
+      lista.push(p.id);
+      disponiblesPorGenero.set(p.genero, lista);
+    }
+
+    // Barajar cada grupo (Fisher–Yates).
+    for (const lista of disponiblesPorGenero.values()) {
+      for (let i = lista.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [lista[i], lista[j]] = [lista[j]!, lista[i]!];
+      }
+    }
+
+    // Emparejar cada objetivo con un disponible de su MISMO género.
+    const asignaciones: { participanteId: string; responsableId: string }[] = [];
+    for (const objetivo of objetivos) {
+      if (objetivo.genero !== "hombre" && objetivo.genero !== "mujer") continue; // ausente sin género => se omite
+      const pool = disponiblesPorGenero.get(objetivo.genero);
+      const responsableId = pool?.shift();
+      if (!responsableId) continue; // no hay disponibles de ese género
+      asignaciones.push({ participanteId: objetivo.participanteId, responsableId });
+    }
+    if (asignaciones.length === 0) return;
+
+    // Actualizar estado local en batch.
+    setEstado((prev) => {
+      const next = { ...prev };
+      for (const { participanteId, responsableId } of asignaciones) {
+        next[participanteId] = {
+          responsableId,
+          justificado: false,
+          contactado: prev[participanteId]?.contactado ?? null,
+        };
+      }
+      return next;
+    });
+
+    // Persistir todas las asignaciones.
+    startTransition(async () => {
+      for (const { participanteId, responsableId } of asignaciones) {
+        const fd = new FormData();
+        fd.set("registroId", registroId);
+        fd.set("participanteId", participanteId);
+        fd.set("responsableId", responsableId);
+        await asignarResponsable(fd);
+      }
+    });
+  }
+
+  /**
+   * Genera una imagen PNG con los ausentes que tienen responsable asignado,
+   * incluyendo el celular del ausente.
+   */
+  async function generarImagen() {
+    const filas = ausentes
+      .filter((a) => {
+        const f = estado[a.participanteId];
+        return !(f?.justificado ?? false) && (f?.responsableId ?? null) != null;
+      })
+      .map((a) => {
+        const responsableId = estado[a.participanteId]!.responsableId!;
+        return {
+          ausente: a.nombre,
+          celular: a.celular ?? "",
+          responsable: nombrePorId.get(responsableId) ?? responsableId,
+        };
+      });
+    if (filas.length === 0) return;
+    setGenerandoImagen(true);
+    try {
+      await exportarAsignacionesImagen({ titulo: fechaLabel, filas });
+    } catch (err) {
+      console.error("Error al generar la imagen:", err);
+    } finally {
+      setGenerandoImagen(false);
+    }
   }
 
   // Partición reactiva según el estado local: los justificados salen de la lista
@@ -357,9 +467,31 @@ export function AusentesCell({
 
             {/* Lista de ausentes (zonas de drop) */}
             <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 flex flex-col min-h-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/50 mb-2">
-                Ausentes ({noJustificados.length})
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/50">
+                  Ausentes ({noJustificados.length})
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={asignarAleatorio}
+                    disabled={isPending || noJustificados.every((a) => estado[a.participanteId]?.responsableId != null)}
+                    className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Asignar responsables aleatoriamente a los ausentes sin responsable"
+                  >
+                    🎲 Aleatorio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={generarImagen}
+                    disabled={generandoImagen || noJustificados.every((a) => (estado[a.participanteId]?.responsableId ?? null) == null)}
+                    className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-1 text-[11px] font-medium text-sky-300 hover:bg-sky-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Generar imagen con ausentes, responsables y celular"
+                  >
+                    {generandoImagen ? "Generando…" : "🖼️ Imagen"}
+                  </button>
+                </div>
+              </div>
               <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
                 {noJustificados.map((a) => renderFila(a))}
                 {noJustificados.length === 0 && (

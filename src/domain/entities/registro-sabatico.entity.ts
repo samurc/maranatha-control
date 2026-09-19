@@ -56,6 +56,12 @@ export interface AsistenciaParticipante {
    * "Contactado" / "Sin contactar".
    */
   readonly contactado?: boolean;
+  /**
+   * Cantidad de visitas que este Participante presente trajo a la clase ese
+   * sábado. Se establece desde la vista /registros al hacer clic en la cifra de
+   * presentes. Entero >= 0.
+   */
+  readonly visitasTraidas?: number;
 }
 
 /** Totales rápidos agregados de un Registro_Sabatico (`calcularTotalesRapidos`, tarea 6.1). */

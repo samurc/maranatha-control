@@ -10,6 +10,7 @@ export interface ModalAsistenciaMobileProps {
   indicadores: Record<string, string>;
   onClose: () => void;
   onSelect: (pIdx: number, valor: string) => void;
+  onExonerar: (pIdx: number) => void;
   onAvanzar: (pIdx: number) => void;
   onRetroceder: (pIdx: number) => void;
   onUpdateIndicador: (clave: string, valor: string) => void;
@@ -32,6 +33,7 @@ export function ModalAsistenciaMobile({
   indicadores,
   onClose,
   onSelect,
+  onExonerar,
   onAvanzar,
   onRetroceder,
   onUpdateIndicador,
@@ -39,7 +41,7 @@ export function ModalAsistenciaMobile({
   const p = participantes[participanteActivoIdx];
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   const [wizardPaso, setWizardPaso] = useState<number | null>(null);
   const [wizardValue, setWizardValue] = useState<string>("");
 
@@ -79,7 +81,7 @@ export function ModalAsistenciaMobile({
       if (step) {
         onUpdateIndicador(`${step.id}-${sabado}`, wizardValue);
       }
-      
+
       if (wizardPaso < indicadoresSteps.length - 1) {
         const nextStep = indicadoresSteps[wizardPaso + 1];
         setWizardPaso(wizardPaso + 1);
@@ -127,7 +129,7 @@ export function ModalAsistenciaMobile({
     if (!step) return;
 
     const isDecimal = step.type === 'decimal';
-    
+
     if (key === '⌫') {
       setWizardValue(prev => prev.slice(0, -1));
     } else if (key === '.') {
@@ -145,8 +147,8 @@ export function ModalAsistenciaMobile({
         <h2 className="text-sm font-semibold text-foreground/60 uppercase tracking-wider">
           Sábado {sabado}
         </h2>
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="p-2 -mt-2 -mr-2 text-foreground/50 hover:bg-foreground/10 rounded-full transition-colors"
         >
           ✕
@@ -155,7 +157,7 @@ export function ModalAsistenciaMobile({
 
       <div className="flex flex-col items-center justify-center p-6 space-y-4">
         <div className="flex items-center w-full justify-between">
-          <button 
+          <button
             onClick={handleRetroceder}
             className={`p-3 rounded-full ${participanteActivoIdx > 0 ? "text-foreground hover:bg-foreground/10" : "text-foreground/20 cursor-not-allowed"}`}
             disabled={participanteActivoIdx === 0}
@@ -175,7 +177,7 @@ export function ModalAsistenciaMobile({
             </div>
           )}
 
-          <button 
+          <button
             onClick={handleAvanzar}
             className="p-3 rounded-full text-foreground hover:bg-foreground/10"
           >
@@ -195,7 +197,7 @@ export function ModalAsistenciaMobile({
         {opciones.map(op => {
           const isSelected = valorActual === op;
           let btnClass = "bg-transparent text-foreground border-2 border-foreground/20 hover:bg-foreground/5";
-          
+
           if (isSelected) {
             if (op === "F") {
               btnClass = "bg-red-500 text-white border-red-500 shadow-md";
@@ -215,13 +217,23 @@ export function ModalAsistenciaMobile({
           );
         })}
       </div>
-      
-      <div className="p-2 flex justify-center">
+
+      <div className="p-2 pb-4 flex justify-center gap-2">
         <button
           onClick={() => onSelect(participanteActivoIdx, "")}
           className="py-2 px-4 rounded-xl border-2 border-foreground/20 text-foreground hover:bg-foreground/5"
         >
           Borrar
+        </button>
+        <button
+          onClick={() => {
+            onExonerar(participanteActivoIdx);
+            handleAvanzar();
+          }}
+          className="py-2 px-4 rounded-xl border-2 border-orange-500/40 bg-orange-500/10 text-orange-400 font-medium hover:bg-orange-500/20 transition-colors"
+          title="Marcar como falta justificada (aparecerá como Justificado en Registros)"
+        >
+          Exonerar
         </button>
       </div>
     </>
@@ -239,7 +251,7 @@ export function ModalAsistenciaMobile({
     return (
       <div className="flex flex-col h-full">
         <div className="flex justify-between items-start p-4 bg-foreground/[0.03]">
-          <button 
+          <button
             onClick={handleRetroceder}
             className="p-2 -mt-2 -ml-2 text-foreground/50 hover:bg-foreground/10 rounded-full transition-colors"
           >
@@ -250,8 +262,8 @@ export function ModalAsistenciaMobile({
           <span className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">
             Indicadores {wizardPaso + 1} de {indicadoresSteps.length}
           </span>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-2 -mt-2 -mr-2 text-foreground/50 hover:bg-foreground/10 rounded-full transition-colors"
           >
             ✕
@@ -262,7 +274,7 @@ export function ModalAsistenciaMobile({
           <h3 className="text-lg font-bold text-center leading-tight text-foreground/80">
             {step.label}
           </h3>
-          
+
           <div className="text-5xl font-bold text-blue-500 min-h-[60px] flex items-center">
             {wizardValue || "0"}
           </div>
@@ -283,7 +295,7 @@ export function ModalAsistenciaMobile({
               </button>
             ))}
           </div>
-          
+
           <button
             onClick={handleAvanzar}
             className="w-full py-4 rounded-xl font-bold text-lg bg-blue-500 text-white hover:bg-blue-600 transition-all active:scale-95 shadow-md"
@@ -297,7 +309,7 @@ export function ModalAsistenciaMobile({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div 
+      <div
         ref={modalRef}
         className="bg-background w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col relative"
         onTouchStart={handleTouchStart}

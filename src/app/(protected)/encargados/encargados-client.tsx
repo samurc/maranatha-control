@@ -5,6 +5,7 @@ import {
   asignarEncargado,
   establecerEstadoSabado,
   exportarRolExcel,
+  guardarHimnosSabado,
   moverEncargado,
   quitarEncargado,
 } from "./actions";
@@ -33,6 +34,8 @@ interface EncargadosClientProps {
   asignacionesIniciales: Record<string, string>;
   /** Estados existentes por sábado: `${fechaISO}` -> estado. */
   estadosIniciales: Record<string, EstadoSabado>;
+  /** Himnos existentes por sábado: `${fechaISO}` -> { inicial, final }. */
+  himnosIniciales: Record<string, { inicial: string; final: string }>;
 }
 
 /** Referencia a un casillero concreto (sábado + posición). */
@@ -94,6 +97,7 @@ export function EncargadosClient({
   nombreIglesia,
   asignacionesIniciales,
   estadosIniciales,
+  himnosIniciales,
 }: EncargadosClientProps) {
   // Estado local optimista de las asignaciones (clave -> participanteId).
   const [asignaciones, setAsignaciones] =
@@ -101,6 +105,9 @@ export function EncargadosClient({
   // Estado local optimista del estado por sábado (fechaISO -> estado).
   const [estados, setEstados] =
     useState<Record<string, EstadoSabado>>(estadosIniciales);
+  // Estado local optimista de los himnos por sábado (fechaISO -> {inicial, final}).
+  const [himnos, setHimnos] =
+    useState<Record<string, { inicial: string; final: string }>>(himnosIniciales);
   const [guardando, startTransition] = useTransition();
   // Se pone en true tras la primera operación; permite mostrar "Guardado"
   // solo cuando ya hubo al menos un cambio (no al cargar la página).
@@ -148,6 +155,31 @@ export function EncargadosClient({
     formData.set("estado", estado);
     startTransition(async () => {
       await establecerEstadoSabado(formData);
+    });
+  }
+
+  /** Actualiza el valor local de un himno (sin persistir todavía). */
+  function editarHimno(fechaISO: string, campo: "inicial" | "final", valor: string) {
+    setHimnos((prev) => ({
+      ...prev,
+      [fechaISO]: {
+        inicial: prev[fechaISO]?.inicial ?? "",
+        final: prev[fechaISO]?.final ?? "",
+        [campo]: valor,
+      },
+    }));
+  }
+
+  /** Persiste los himnos del sábado (llamado al salir del input). */
+  function guardarHimnos(fechaISO: string) {
+    const actual = himnos[fechaISO] ?? { inicial: "", final: "" };
+    setHuboCambios(true);
+    const formData = new FormData();
+    formData.set("fechaISO", fechaISO);
+    formData.set("himnoInicial", actual.inicial);
+    formData.set("himnoFinal", actual.final);
+    startTransition(async () => {
+      await guardarHimnosSabado(formData);
     });
   }
 
@@ -291,11 +323,10 @@ export function EncargadosClient({
                           type="button"
                           aria-pressed={estado === "por_confirmar"}
                           onClick={() => cambiarEstado(sabado.fechaISO, "por_confirmar")}
-                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                            estado === "por_confirmar"
-                              ? "border-amber-500/40 bg-amber-500/15 text-amber-400"
-                              : "border-foreground/15 text-foreground/40 hover:bg-foreground/[0.04]"
-                          }`}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${estado === "por_confirmar"
+                            ? "border-amber-500/40 bg-amber-500/15 text-amber-400"
+                            : "border-foreground/15 text-foreground/40 hover:bg-foreground/[0.04]"
+                            }`}
                         >
                           Por confirmar
                         </button>
@@ -303,11 +334,10 @@ export function EncargadosClient({
                           type="button"
                           aria-pressed={estado === "confirmado"}
                           onClick={() => cambiarEstado(sabado.fechaISO, "confirmado")}
-                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                            estado === "confirmado"
-                              ? "border-green-500/40 bg-green-500/15 text-green-400"
-                              : "border-foreground/15 text-foreground/40 hover:bg-foreground/[0.04]"
-                          }`}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${estado === "confirmado"
+                            ? "border-green-500/40 bg-green-500/15 text-green-400"
+                            : "border-foreground/15 text-foreground/40 hover:bg-foreground/[0.04]"
+                            }`}
                         >
                           Confirmado
                         </button>
@@ -350,13 +380,12 @@ export function EncargadosClient({
                             mover(origen.origen, destino);
                           }
                         }}
-                        className={`flex min-h-[68px] flex-col gap-1 rounded-md border border-dashed px-3 py-2 transition-colors ${
-                          activo
-                            ? "border-blue-500/50 bg-blue-500/10"
-                            : asignado
-                              ? "border-foreground/20 bg-background"
-                              : "border-foreground/15 bg-foreground/[0.02]"
-                        }`}
+                        className={`flex min-h-[68px] flex-col gap-1 rounded-md border border-dashed px-3 py-2 transition-colors ${activo
+                          ? "border-blue-500/50 bg-blue-500/10"
+                          : asignado
+                            ? "border-foreground/20 bg-background"
+                            : "border-foreground/15 bg-foreground/[0.02]"
+                          }`}
                       >
                         <span className="text-[11px] font-medium uppercase tracking-wide text-foreground/40">
                           {ETIQUETAS_CASILLERO[slot]}
@@ -402,6 +431,36 @@ export function EncargadosClient({
                     );
                   })}
                 </div>
+
+                {/* Himnos del sábado */}
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-foreground/40">
+                      Himno inicial
+                    </span>
+                    <input
+                      type="text"
+                      value={himnos[sabado.fechaISO]?.inicial ?? ""}
+                      onChange={(e) => editarHimno(sabado.fechaISO, "inicial", e.target.value)}
+                      onBlur={() => guardarHimnos(sabado.fechaISO)}
+                      placeholder="Ej: N.° 368 – Padre amado"
+                      className="w-full rounded-md border border-foreground/15 bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-foreground/30 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-foreground/40">
+                      Himno final
+                    </span>
+                    <input
+                      type="text"
+                      value={himnos[sabado.fechaISO]?.final ?? ""}
+                      onChange={(e) => editarHimno(sabado.fechaISO, "final", e.target.value)}
+                      onBlur={() => guardarHimnos(sabado.fechaISO)}
+                      placeholder="Ej: N.° 248 – Que mi vida entera esté"
+                      className="w-full rounded-md border border-foreground/15 bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-foreground/30 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                    />
+                  </label>
+                </div>
               </div>
             ))
           )}
@@ -434,12 +493,11 @@ export function EncargadosClient({
                       setArrastrando(origen);
                     }}
                     onDragEnd={() => setArrastrando(null)}
-                    className={`flex cursor-grab items-center gap-2 rounded-md border border-foreground/10 bg-background px-2 py-1.5 transition-colors hover:bg-foreground/[0.04] active:cursor-grabbing ${
-                      arrastrando?.tipo === "lista" &&
+                    className={`flex cursor-grab items-center gap-2 rounded-md border border-foreground/10 bg-background px-2 py-1.5 transition-colors hover:bg-foreground/[0.04] active:cursor-grabbing ${arrastrando?.tipo === "lista" &&
                       arrastrando.participanteId === p.id
-                        ? "opacity-50"
-                        : ""
-                    }`}
+                      ? "opacity-50"
+                      : ""
+                      }`}
                   >
                     <Avatar participante={p} />
                     <div className="min-w-0 flex-1">

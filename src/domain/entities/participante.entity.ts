@@ -5,6 +5,9 @@
  */
 export type EstadoParticipante = "activo" | "inactivo";
 
+/** Género del Participante. Obligatorio al crear/editar. */
+export type GeneroParticipante = "hombre" | "mujer";
+
 /**
  * Código de enlace de un solo uso que vincula un Participante sin
  * `userUid` a una futura cuenta de Alumno (Requerimientos 1.7, 1.8, 6.7).
@@ -22,6 +25,12 @@ export interface Participante {
   readonly unidadId: string;
   readonly nombre: string;
   readonly apellido: string;
+  /**
+   * Género del Participante. Obligatorio al crear/editar desde el formulario
+   * (validado en la UI y en las server actions), pero opcional en el modelo de
+   * dominio para tolerar registros antiguos creados antes de introducir el campo.
+   */
+  readonly genero?: GeneroParticipante;
   readonly esVisita: boolean;
   /** Opcional: nunca expuesto en agregados del Dashboard (Requirement 21.1). */
   readonly esMenorEdad?: boolean;
@@ -30,5 +39,7 @@ export interface Participante {
   readonly userUid?: string;
   readonly codigoEnlace?: CodigoEnlace;
   readonly fotoUrl?: string;
+  /** Himno favorito en texto libre: número y nombre (p. ej. "334 - Firmes y adelante"). */
+  readonly himnoFavorito?: string;
   readonly creadoEn: Date;
 }

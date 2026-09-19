@@ -4,7 +4,10 @@ import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import { DeleteButton } from "../../../presentation/components/delete-button";
 import { CrearParticipanteForm } from "../../../presentation/components/crear-participante-form";
 import { EditarParticipanteForm } from "../../../presentation/components/editar-participante-form";
-import { crearParticipante, eliminarParticipante, editarParticipante } from "./actions";
+import { HimnoFavoritoButton, type CandidatoHimno } from "../../../presentation/components/himno-favorito-button";
+import { WhatsappQrButton } from "../../../presentation/components/whatsapp-qr-button";
+import { crearParticipante, eliminarParticipante, editarParticipante, guardarHimnoFavorito } from "./actions";
+import { guardarWhatsappQr } from "../unidades/actions";
 
 export default async function ParticipantesPage(): Promise<React.JSX.Element> {
   const claims = await obtenerClaimsDeSesion();
@@ -32,12 +35,25 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
     ]);
 
     const participantes = participantesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const unidades = unidadesSnap.docs.map((d) => ({ id: d.id, nombre: d.data().nombre, iglesiaId: d.data().iglesiaId }));
+    const unidades = unidadesSnap.docs.map((d) => ({ id: d.id, nombre: d.data().nombre, iglesiaId: d.data().iglesiaId, whatsappQrUrl: (d.data().whatsappQrUrl as string | null) ?? null }));
     const iglesias = iglesiasSnap.docs.map((d) => ({ id: d.id, nombre: d.data().nombre }));
 
     // Resolver nombre de iglesia y unidad para mostrar en la info del secretario/maestro
     const iglesiaActual = iglesias.find((i) => i.id === claims.iglesiaId);
     const unidadActual = unidades.find((u) => u.id === claims.unidadId);
+
+    // Candidatos para "Himno favorito": participantes activos sin himno asignado.
+    const candidatosHimno: CandidatoHimno[] = participantes
+      .filter((p: Record<string, unknown>) => {
+        const himno = p.himnoFavorito;
+        const sinHimno = typeof himno !== "string" || himno.trim().length === 0;
+        return p.estado === "activo" && sinHimno;
+      })
+      .map((p: Record<string, unknown>) => ({
+        id: p.id as string,
+        nombre: `${(p.nombre as string) ?? ""} ${(p.apellido as string) ?? ""}`.trim() || (p.id as string),
+        fotoUrl: typeof p.fotoUrl === "string" && p.fotoUrl.length > 0 ? (p.fotoUrl as string) : null,
+      }));
 
     contenido = (
       <div className="space-y-6">
@@ -52,14 +68,25 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                   : "Miembros y visitas de las Unidades de Acción"}
             </p>
           </div>
-          <CrearParticipanteForm
-            action={crearParticipante}
-            esRolOperativo={esRolOperativo}
-            iglesiaId={claims.iglesiaId}
-            unidadId={claims.unidadId}
-            iglesias={iglesias}
-            unidades={unidades}
-          />
+          <div className="flex items-center gap-3">
+            {claims.unidadId && unidadActual && (
+              <WhatsappQrButton
+                unidadId={claims.unidadId}
+                nombreUnidad={unidadActual.nombre}
+                qrUrlInicial={unidadActual.whatsappQrUrl}
+                action={guardarWhatsappQr}
+              />
+            )}
+            <HimnoFavoritoButton candidatos={candidatosHimno} action={guardarHimnoFavorito} />
+            <CrearParticipanteForm
+              action={crearParticipante}
+              esRolOperativo={esRolOperativo}
+              iglesiaId={claims.iglesiaId}
+              unidadId={claims.unidadId}
+              iglesias={iglesias}
+              unidades={unidades}
+            />
+          </div>
         </div>
 
         {/* Desktop View */}
@@ -71,6 +98,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                 <th className="px-4 py-3 text-left font-medium text-foreground/70">F. Nacimiento</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground/70">Estado</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground/70">Tipo</th>
+                <th className="px-4 py-3 text-left font-medium text-foreground/70">Himno Favorito</th>
                 <th className="px-4 py-3 text-left font-medium text-foreground/70">Comentario</th>
                 <th className="px-4 py-3 text-right font-medium text-foreground/70">Acciones</th>
               </tr>
@@ -78,30 +106,61 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
             <tbody className="divide-y divide-foreground/5">
               {participantes.map((p: Record<string, unknown>) => (
                 <tr key={p.id as string} className="hover:bg-foreground/[0.02] transition-colors">
-                  <td className="px-4 py-3 text-foreground font-medium flex items-center gap-3">
-                    {p.fotoUrl ? (
-                      <img src={p.fotoUrl as string} alt="" className="w-8 h-8 rounded-full object-cover bg-foreground/5" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs font-bold border border-blue-500/20">
-                        {(p.nombre as string).charAt(0).toUpperCase()}{(p.apellido as string).charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    {p.nombre as string} {p.apellido as string}
+                  <td className="px-4 py-3 text-foreground font-medium">
+                    <EditarParticipanteForm
+                      participante={{
+                        id: p.id as string,
+                        nombre: p.nombre as string,
+                        apellido: p.apellido as string,
+                        esVisita: p.esVisita as boolean,
+                        estado: p.estado as string | undefined,
+                        fechaNacimiento: p.fechaNacimiento as string | undefined,
+                        celular: p.celular as string | undefined,
+                        correo: p.correo as string | undefined,
+                        distritoResidencia: p.distritoResidencia as string | undefined,
+                        direccion: p.direccion as string | undefined,
+                        comentario: p.comentario as string | undefined,
+                        fotoUrl: p.fotoUrl as string | undefined,
+                        himnoFavorito: p.himnoFavorito as string | undefined,
+                        genero: p.genero as string | undefined,
+                      }}
+                      action={editarParticipante}
+                      triggerClassName="flex items-center gap-3 text-left hover:text-blue-300 transition-colors"
+                      trigger={
+                        <>
+                          {p.fotoUrl ? (
+                            <img src={p.fotoUrl as string} alt="" className="w-8 h-8 rounded-full object-cover bg-foreground/5" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-xs font-bold border border-blue-500/20">
+                              {(p.nombre as string).charAt(0).toUpperCase()}{(p.apellido as string).charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span>{p.nombre as string} {p.apellido as string}</span>
+                        </>
+                      }
+                    />
                   </td>
                   <td className="px-4 py-3 text-foreground/70 text-xs">{(p.fechaNacimiento as string) ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
-                    }`}>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
+                      }`}>
                       {p.estado as string}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
-                    }`}>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
+                      }`}>
                       {p.esVisita ? "Visita" : "Miembro"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-foreground/70 text-xs">
+                    {typeof p.himnoFavorito === "string" && p.himnoFavorito.trim().length > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-purple-300">
+                        🎵 {p.himnoFavorito as string}
+                      </span>
+                    ) : (
+                      <span className="text-foreground/40">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-foreground/70 text-xs">{(p.comentario as string) ?? "—"}</td>
                   <td className="px-4 py-3 text-right space-x-3">
@@ -119,6 +178,8 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                         direccion: p.direccion as string | undefined,
                         comentario: p.comentario as string | undefined,
                         fotoUrl: p.fotoUrl as string | undefined,
+                        himnoFavorito: p.himnoFavorito as string | undefined,
+                        genero: p.genero as string | undefined,
                       }}
                       action={editarParticipante}
                     />
@@ -127,7 +188,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                 </tr>
               ))}
               {participantes.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-foreground/50">Sin participantes registrados</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-foreground/50">Sin participantes registrados</td></tr>
               )}
             </tbody>
           </table>
@@ -138,32 +199,60 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
           {participantes.map((p: Record<string, unknown>) => (
             <div key={p.id as string} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 space-y-3">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  {p.fotoUrl ? (
-                    <img src={p.fotoUrl as string} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20">
-                      {(p.nombre as string).charAt(0).toUpperCase()}{(p.apellido as string).charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{p.nombre as string} {p.apellido as string}</p>
-                    <p className="text-xs text-foreground/60 mt-0.5">F. Nac: {(p.fechaNacimiento as string) || "—"}</p>
-                  </div>
-                </div>
+                <EditarParticipanteForm
+                  participante={{
+                    id: p.id as string,
+                    nombre: p.nombre as string,
+                    apellido: p.apellido as string,
+                    esVisita: p.esVisita as boolean,
+                    estado: p.estado as string | undefined,
+                    fechaNacimiento: p.fechaNacimiento as string | undefined,
+                    celular: p.celular as string | undefined,
+                    correo: p.correo as string | undefined,
+                    distritoResidencia: p.distritoResidencia as string | undefined,
+                    direccion: p.direccion as string | undefined,
+                    comentario: p.comentario as string | undefined,
+                    fotoUrl: p.fotoUrl as string | undefined,
+                    himnoFavorito: p.himnoFavorito as string | undefined,
+                    genero: p.genero as string | undefined,
+                  }}
+                  action={editarParticipante}
+                  triggerClassName="flex items-center gap-3 text-left"
+                  trigger={
+                    <>
+                      {p.fotoUrl ? (
+                        <img src={p.fotoUrl as string} alt="" className="w-10 h-10 rounded-full object-cover bg-foreground/5" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-sm font-bold border border-blue-500/20">
+                          {(p.nombre as string).charAt(0).toUpperCase()}{(p.apellido as string).charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-foreground text-sm">{p.nombre as string} {p.apellido as string}</p>
+                        <p className="text-xs text-foreground/60 mt-0.5">F. Nac: {(p.fechaNacimiento as string) || "—"}</p>
+                      </div>
+                    </>
+                  }
+                />
                 <div className="flex flex-col items-end gap-1.5">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
-                  }`}>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
+                    }`}>
                     {p.estado as string}
                   </span>
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
-                  }`}>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
+                    }`}>
                     {p.esVisita ? "Visita" : "Miembro"}
                   </span>
                 </div>
               </div>
+              {typeof p.himnoFavorito === "string" && p.himnoFavorito.trim().length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-foreground/40">Himno favorito:</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-purple-300">
+                    🎵 {p.himnoFavorito as string}
+                  </span>
+                </div>
+              )}
               {(p.comentario as string) && (
                 <div className="text-xs text-foreground/70 bg-foreground/5 rounded px-2 py-1.5 border border-foreground/5">
                   {p.comentario as string}
@@ -184,6 +273,8 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                     direccion: p.direccion as string | undefined,
                     comentario: p.comentario as string | undefined,
                     fotoUrl: p.fotoUrl as string | undefined,
+                    himnoFavorito: p.himnoFavorito as string | undefined,
+                    genero: p.genero as string | undefined,
                   }}
                   action={editarParticipante}
                 />

@@ -2,7 +2,10 @@ import { SectionGuard } from "../../../presentation/components/section-guard";
 import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import { AusentesCell, type AusenteVista, type ParticipanteOpcion } from "./registros-client";
-import { asignarResponsableAusente, justificarAusente, marcarContactoAusente } from "./actions";
+import { PresentesCell, type PresenteVista } from "./presentes-client";
+import { asignarResponsableAusente, justificarAusente, marcarContactoAusente, guardarVisitasTraidas } from "./actions";
+import { Top10Button, type TopItem } from "../../../presentation/components/top10-presencia-button";
+import { IndicadorChartHeader, type PuntoSerie } from "./indicador-chart-header";
 
 export default async function RegistrosPage(): Promise<React.JSX.Element> {
   const claims = await obtenerClaimsDeSesion();
@@ -43,16 +46,23 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
 
     const nombrePorId = new Map<string, string>();
     const fotoPorId = new Map<string, string>();
+    const generoPorId = new Map<string, string>();
+    const celularPorId = new Map<string, string>();
     const participantesActivos: ParticipanteOpcion[] = [];
     for (const doc of participantesSnap.docs) {
-      const p = doc.data() as { nombre?: string; apellido?: string; estado?: string; fotoUrl?: string };
+      const p = doc.data() as { nombre?: string; apellido?: string; estado?: string; fotoUrl?: string; genero?: string; celular?: string };
       const nombreCompleto = `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim() || doc.id;
       nombrePorId.set(doc.id, nombreCompleto);
       if (typeof p.fotoUrl === "string" && p.fotoUrl.length > 0) {
         fotoPorId.set(doc.id, p.fotoUrl);
       }
+      if (typeof p.celular === "string" && p.celular.length > 0) {
+        celularPorId.set(doc.id, p.celular);
+      }
+      const genero = p.genero === "hombre" || p.genero === "mujer" ? p.genero : null;
+      if (genero) generoPorId.set(doc.id, genero);
       if (p.estado === "activo") {
-        participantesActivos.push({ id: doc.id, nombre: nombreCompleto });
+        participantesActivos.push({ id: doc.id, nombre: nombreCompleto, genero });
       }
     }
     participantesActivos.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
@@ -60,12 +70,14 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
     // Derivar la lista de ausentes por registro a partir del mapa `asistencia`
     // (presente === false), resolviendo el nombre desde `nombrePorId`.
     const ausentesPorRegistro = new Map<string, AusenteVista[]>();
+    const presentesPorRegistro = new Map<string, PresenteVista[]>();
     for (const r of registros) {
       const asistencia = ((r as Record<string, unknown>).asistencia ?? {}) as Record<
         string,
-        { presente?: boolean; responsableId?: string | null; justificado?: boolean; contactado?: boolean }
+        { presente?: boolean; responsableId?: string | null; justificado?: boolean; contactado?: boolean; visitasTraidas?: number }
       >;
       const lista: AusenteVista[] = [];
+      const presentesLista: PresenteVista[] = [];
       for (const [pid, entrada] of Object.entries(asistencia)) {
         if (entrada?.presente === false) {
           lista.push({
@@ -75,12 +87,69 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
             responsableId: entrada.responsableId ?? null,
             justificado: entrada.justificado ?? false,
             contactado: typeof entrada.contactado === "boolean" ? entrada.contactado : null,
+            genero: generoPorId.get(pid) ?? null,
+            celular: celularPorId.get(pid) ?? null,
+          });
+        } else if (entrada?.presente === true) {
+          presentesLista.push({
+            participanteId: pid,
+            nombre: nombrePorId.get(pid) ?? pid,
+            fotoUrl: fotoPorId.get(pid) ?? null,
+            visitasTraidas: typeof entrada.visitasTraidas === "number" && entrada.visitasTraidas > 0
+              ? Math.floor(entrada.visitasTraidas)
+              : 0,
           });
         }
       }
       lista.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+      presentesLista.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
       ausentesPorRegistro.set(r.id as string, lista);
+      presentesPorRegistro.set(r.id as string, presentesLista);
     }
+
+    // Acumular por participante a través de todos los registros:
+    // - presencias (asistencia[pid].presente === true)
+    // - visitas traídas (suma de asistencia[pid].visitasTraidas)
+    const presenciasPorId = new Map<string, number>();
+    const visitasPorId = new Map<string, number>();
+    // Top contactadores: cuántos ausentes efectivamente contactados
+    // (contactado === true) tiene a su cargo cada responsable asignado.
+    const contactadosPorResponsableId = new Map<string, number>();
+    for (const r of registros) {
+      const asistencia = ((r as Record<string, unknown>).asistencia ?? {}) as Record<
+        string,
+        { presente?: boolean; visitasTraidas?: number; responsableId?: string | null; contactado?: boolean }
+      >;
+      for (const [pid, entrada] of Object.entries(asistencia)) {
+        if (entrada?.presente === true) {
+          presenciasPorId.set(pid, (presenciasPorId.get(pid) ?? 0) + 1);
+        }
+        if (typeof entrada?.visitasTraidas === "number" && entrada.visitasTraidas > 0) {
+          visitasPorId.set(pid, (visitasPorId.get(pid) ?? 0) + Math.floor(entrada.visitasTraidas));
+        }
+        // Solo cuenta si hay responsable Y el ausente fue contactado.
+        if (entrada?.responsableId && entrada.contactado === true) {
+          const rid = entrada.responsableId;
+          contactadosPorResponsableId.set(rid, (contactadosPorResponsableId.get(rid) ?? 0) + 1);
+        }
+      }
+    }
+
+    const construirTop = (mapa: Map<string, number>): TopItem[] =>
+      Array.from(mapa.entries())
+        .map(([pid, valor]) => ({
+          participanteId: pid,
+          nombre: nombrePorId.get(pid) ?? pid,
+          fotoUrl: fotoPorId.get(pid) ?? null,
+          valor,
+        }))
+        .filter((x) => x.valor > 0)
+        .sort((a, b) => b.valor - a.valor || a.nombre.localeCompare(b.nombre, "es"))
+        .slice(0, 10);
+
+    const top10Presencia = construirTop(presenciasPorId);
+    const top10Visitas = construirTop(visitasPorId);
+    const top10Contactadores = construirTop(contactadosPorResponsableId);
 
     // Cargar indicadores semanales
     const indicadores: Record<string, string> = {};
@@ -114,33 +183,88 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
       { prefijo: "vi", label: "N° visitas" },
     ];
 
+    // Series cronológicas (más antiguo primero) para los gráficos de evolución.
+    const registrosCronologicos = [...registros].reverse();
+    const parseNum = (v: unknown): number => {
+      if (typeof v === "number") return v;
+      if (typeof v === "string") {
+        const n = Number.parseFloat(v.replace(/[^0-9.,-]/g, "").replace(",", "."));
+        return Number.isFinite(n) ? n : 0;
+      }
+      return 0;
+    };
+    const construirPunto = (r: Record<string, unknown>): { label: string; labelLargo: string } => {
+      const sab = r.sabadoEclesiastico as { fechaISO?: string; numeroSabado?: number; numeroTrimestre?: number } | undefined;
+      return {
+        label: `S${sab?.numeroSabado ?? "?"}`,
+        labelLargo: `${sab?.fechaISO ?? "—"} (T${sab?.numeroTrimestre} S${sab?.numeroSabado})`,
+      };
+    };
+
+    const seriePresentes: PuntoSerie[] = registrosCronologicos.map((r) => {
+      const t = (r as Record<string, unknown>).totalesRapidos as { presentes?: number } | undefined;
+      return { ...construirPunto(r as Record<string, unknown>), valor: t?.presentes ?? 0 };
+    });
+    const serieAusentes: PuntoSerie[] = registrosCronologicos.map((r) => {
+      const t = (r as Record<string, unknown>).totalesRapidos as { ausentes?: number } | undefined;
+      return { ...construirPunto(r as Record<string, unknown>), valor: t?.ausentes ?? 0 };
+    });
+    const seriesIndicadores: Record<string, PuntoSerie[]> = {};
+    for (const { prefijo } of INDICADORES_LABELS) {
+      seriesIndicadores[prefijo] = registrosCronologicos.map((r) => {
+        const sab = (r as Record<string, unknown>).sabadoEclesiastico as { numeroSabado?: number } | undefined;
+        const clave = sab?.numeroSabado != null ? `${prefijo}-${sab.numeroSabado}` : "";
+        return { ...construirPunto(r as Record<string, unknown>), valor: parseNum(indicadores[clave]) };
+      });
+    }
+
     contenido = (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Registros Sabáticos</h1>
-          <p className="mt-1 text-sm text-foreground/60">
-            {nombreUnidad ? `Registros de ${nombreUnidad}` : "Registros de asistencia y estudio por sábado"}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Registros Sabáticos</h1>
+            <p className="mt-1 text-sm text-foreground/60">
+              {nombreUnidad ? `Registros de ${nombreUnidad}` : "Registros de asistencia y estudio por sábado"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Top10Button
+              top={top10Presencia}
+              color="amber"
+              botonLabel="🏆 Top 10 asistencia"
+              titulo="Top 10 asistencia"
+              descripcion="Participantes con más presencias registradas."
+              vacioLabel="Aún no hay presencias registradas."
+            />
+            <Top10Button
+              top={top10Visitas}
+              color="sky"
+              botonLabel="👥 Top 10 visitas"
+              titulo="Top 10 visitas"
+              descripcion="Participantes que más visitas trajeron a la clase."
+              vacioLabel="Aún no hay visitas registradas."
+            />
+            <Top10Button
+              top={top10Contactadores}
+              color="sky"
+              botonLabel="📞 Top 10 contactadores"
+              titulo="Top 10 contactadores"
+              descripcion="Responsables que efectivamente contactaron a sus ausentes asignados."
+              vacioLabel="Aún no hay ausentes contactados."
+            />
+          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-foreground/50">Total registros</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">{registros.length}</p>
-          </div>
-          <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-foreground/50">Borradores</p>
-            <p className="mt-1 text-2xl font-bold text-amber-400">
-              {registros.filter((r: Record<string, unknown>) => r.estado === "borrador").length}
-            </p>
-          </div>
-          <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-foreground/50">Cerrados</p>
-            <p className="mt-1 text-2xl font-bold text-green-500">
-              {registros.filter((r: Record<string, unknown>) => r.estado === "cerrado").length}
-            </p>
-          </div>
+        {/* Disclaimer de interacción */}
+        <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-xs text-foreground/70">
+          <span className="shrink-0 text-blue-400" aria-hidden>ℹ️</span>
+          <p>
+            Presiona la cifra de{" "}
+            <span className="font-semibold text-green-500">Presentes</span> para registrar la cantidad
+            de visitas que trajo cada participante, o la de{" "}
+            <span className="font-semibold text-red-400">Ausentes</span> para dar seguimiento a los
+            ausentes (asignar responsable, justificar y marcar el contacto).
+          </p>
         </div>
 
         {/* Tabla de registros (Desktop) */}
@@ -149,10 +273,22 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
             <thead>
               <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
                 <th className="px-4 py-3 text-left font-medium text-foreground/70">Sábado</th>
-                <th className="px-4 py-3 text-right font-medium text-foreground/70">Presentes</th>
-                <th className="px-4 py-3 text-right font-medium text-foreground/70">Ausentes</th>
+                <th className="px-4 py-3 text-right font-medium">
+                  <IndicadorChartHeader titulo="Presentes" serie={seriePresentes} colorHex="#22c55e" labelClassName="text-green-500" />
+                </th>
+                <th className="px-4 py-3 text-right font-medium">
+                  <IndicadorChartHeader titulo="Ausentes" serie={serieAusentes} colorHex="#f87171" labelClassName="text-red-400" />
+                </th>
                 {esRolOperativo && Object.keys(indicadores).length > 0 && INDICADORES_LABELS.map(({ prefijo, label }) => (
-                  <th key={prefijo} className="px-3 py-3 text-right font-medium text-foreground/70 text-xs whitespace-nowrap">{label}</th>
+                  <th key={prefijo} className="px-3 py-3 text-right font-medium text-xs whitespace-nowrap">
+                    <IndicadorChartHeader
+                      titulo={label}
+                      serie={seriesIndicadores[prefijo] ?? []}
+                      colorHex="#0ea5e9"
+                      formato={prefijo === "of" ? "decimal" : "numero"}
+                      labelClassName="text-foreground/70"
+                    />
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -162,6 +298,7 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
                 const sabado = r.sabadoEclesiastico as { fechaISO?: string; numeroSabado?: number; numeroTrimestre?: number } | undefined;
                 const numSabado = sabado?.numeroSabado;
                 const ausentesLista = ausentesPorRegistro.get(r.id as string) ?? [];
+                const presentesLista = presentesPorRegistro.get(r.id as string) ?? [];
                 const fechaLabel = `${sabado?.fechaISO ?? "—"} (T${sabado?.numeroTrimestre} S${numSabado})`;
                 return (
                   <tr key={r.id as string} className="hover:bg-foreground/[0.02] transition-colors">
@@ -171,7 +308,16 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
                         T{sabado?.numeroTrimestre} S{numSabado}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-green-500 font-medium">{totales?.presentes ?? 0}</td>
+                    <td className="px-4 py-3 text-right">
+                      <PresentesCell
+                        variant="table"
+                        registroId={r.id as string}
+                        fechaLabel={fechaLabel}
+                        totalPresentes={totales?.presentes ?? presentesLista.length}
+                        presentes={presentesLista}
+                        guardarVisitas={guardarVisitasTraidas}
+                      />
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <AusentesCell
                         variant="table"
@@ -215,6 +361,7 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
             const sabado = r.sabadoEclesiastico as { fechaISO?: string; numeroSabado?: number; numeroTrimestre?: number } | undefined;
             const numSabado = sabado?.numeroSabado;
             const ausentesLista = ausentesPorRegistro.get(r.id as string) ?? [];
+            const presentesLista = presentesPorRegistro.get(r.id as string) ?? [];
             const fechaLabel = `${sabado?.fechaISO ?? "—"} (T${sabado?.numeroTrimestre} S${numSabado})`;
 
             return (
@@ -229,10 +376,14 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-green-500/5 rounded p-2 text-center">
-                    <p className="text-[10px] uppercase text-green-500/70 font-semibold mb-0.5">Presentes</p>
-                    <p className="text-lg font-bold text-green-500">{totales?.presentes ?? 0}</p>
-                  </div>
+                  <PresentesCell
+                    variant="card"
+                    registroId={r.id as string}
+                    fechaLabel={fechaLabel}
+                    totalPresentes={totales?.presentes ?? presentesLista.length}
+                    presentes={presentesLista}
+                    guardarVisitas={guardarVisitasTraidas}
+                  />
                   <AusentesCell
                     variant="card"
                     registroId={r.id as string}
