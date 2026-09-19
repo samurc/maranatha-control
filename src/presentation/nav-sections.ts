@@ -83,5 +83,10 @@ export function construirMenuNavegacion(
     items.push({ resource: "datos_personales" as Resource, etiqueta: "Encargados", href: "/encargados" });
   }
 
+  // "Programa Escuela Sabática" al final del menú (secretario y maestro)
+  if (claims.role === "secretario" || claims.role === "maestro") {
+    items.push({ resource: "datos_personales" as Resource, etiqueta: "Programa Escuela Sabática", href: "/programa-escuela-sabatica" });
+  }
+
   return items;
 }
