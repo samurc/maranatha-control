@@ -10,6 +10,7 @@ import {
   quitarEncargado,
 } from "./actions";
 import {
+  CANTIDAD_CASILLEROS,
   ETIQUETAS_CASILLERO,
   type EstadoSabado,
   type SabadoDisponible,
@@ -49,7 +50,11 @@ type Origen =
   | { tipo: "lista"; participanteId: string }
   | { tipo: "casillero"; origen: Casillero; participanteId: string };
 
-const SLOTS = [0, 1, 2] as const;
+/** Índices de casillero (0..CANTIDAD_CASILLEROS-1), derivados de las etiquetas. */
+const SLOTS: readonly number[] = Array.from(
+  { length: CANTIDAD_CASILLEROS },
+  (_, i) => i
+);
 
 function claveCasillero(fechaISO: string, slot: number): string {
   return `${fechaISO}_slot${slot}`;
@@ -291,7 +296,8 @@ export function EncargadosClient({
         </p>
         <p className="mt-1 text-xs text-foreground/40">
           Arrastra a un participante desde la lista de la derecha hacia un
-          casillero del sábado correspondiente. Cada sábado admite 3 encargados.
+          casillero del sábado correspondiente. Cada sábado tiene un casillero
+          por cada momento del programa de Escuela Sabática.
         </p>
       </div>
 
@@ -345,7 +351,7 @@ export function EncargadosClient({
                     );
                   })()}
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {SLOTS.map((slot) => {
                     const clave = claveCasillero(sabado.fechaISO, slot);
                     const asignadoId = asignaciones[clave];

@@ -325,18 +325,27 @@ function usePip(): EstadoPip {
   return { soportado, ventana, abrir, cerrar };
 }
 
+/** Encargado asignado a un momento del programa. */
+interface Encargado {
+  readonly nombre: string;
+  readonly fotoUrl: string | null;
+}
+
 /** Datos que necesita el temporizador flotante para renderizarse. */
 interface FocoTimer {
   readonly titulo: string;
   readonly etiqueta: string;
   readonly segundos: number;
   readonly urgente: boolean;
+  /** Encargado del momento enfocado (o null). */
+  readonly encargado: Encargado | null;
 }
 
 /** Deriva qué mostrar en el temporizador flotante a partir del estado actual. */
 function derivarFocoTimer(
   estado: EstadoPrograma,
-  segundosDelDia: number
+  segundosDelDia: number,
+  encargadosPorSlot: Record<number, Encargado>
 ): FocoTimer {
   if (estado.fase === "en-curso") {
     const bloque = PROGRAMA[estado.indiceActual]!;
@@ -345,10 +354,11 @@ function derivarFocoTimer(
       etiqueta: "Termina en",
       segundos: estado.segundosParaFinBloque,
       urgente: estado.segundosParaFinBloque <= 60,
+      encargado: encargadosPorSlot[estado.indiceActual] ?? null,
     };
   }
   if (estado.fase === "terminado") {
-    return { titulo: "Programa", etiqueta: "", segundos: 0, urgente: false };
+    return { titulo: "Programa", etiqueta: "", segundos: 0, urgente: false, encargado: null };
   }
   // Fase "antes": contamos hacia el inicio del primer bloque.
   const primero = PROGRAMA[0]!;
@@ -357,10 +367,34 @@ function derivarFocoTimer(
     etiqueta: "Comienza en",
     segundos: segundosHasta(segundosDelDia, primero.inicioMin * 60),
     urgente: false,
+    encargado: encargadosPorSlot[0] ?? null,
   };
 }
 
-export function ProgramaClient(): React.JSX.Element {
+interface ProgramaClientProps {
+  /** Encargado por índice de bloque (slot). */
+  readonly encargadosPorSlot: Record<number, Encargado>;
+  /** Etiqueta del sábado objetivo, p. ej. "Sábado 20 de septiembre". */
+  readonly sabadoEtiqueta: string;
+  /** Himno inicial del sábado (texto libre, o "" si no hay). */
+  readonly himnoInicial: string;
+  /** Himno final del sábado (texto libre, o "" si no hay). */
+  readonly himnoFinal: string;
+}
+
+/**
+ * Índice de casillero del "Cierre de la escuela sabática" en /encargados.
+ * Los slots 0..4 se corresponden con los 5 bloques del cronograma; el slot 5
+ * (Cierre) no tiene bloque de tiempo, se muestra como tarjeta final.
+ */
+const SLOT_CIERRE = 5;
+
+export function ProgramaClient({
+  encargadosPorSlot,
+  sabadoEtiqueta,
+  himnoInicial,
+  himnoFinal,
+}: ProgramaClientProps): React.JSX.Element {
   const segundosDelDia = useRelojLocal();
   const montado = !Number.isNaN(segundosDelDia);
   const pip = usePip();
@@ -371,7 +405,9 @@ export function ProgramaClient(): React.JSX.Element {
   }, [montado, segundosDelDia]);
 
   const duracionTotalMin = FIN_PROGRAMA - INICIO_PROGRAMA;
-  const foco = estado ? derivarFocoTimer(estado, segundosDelDia) : null;
+  const foco = estado
+    ? derivarFocoTimer(estado, segundosDelDia, encargadosPorSlot)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -380,6 +416,9 @@ export function ProgramaClient(): React.JSX.Element {
           <h1 className="text-2xl font-bold text-foreground">Programa de Escuela Sabática</h1>
           <p className="mt-1 text-sm text-foreground/60">
             Monitoreo en tiempo real con la hora local del dispositivo · {formatearHora12(INICIO_PROGRAMA)} – {formatearHora12(FIN_PROGRAMA)} ({duracionTotalMin} min)
+          </p>
+          <p className="mt-0.5 text-xs capitalize text-foreground/40">
+            Encargados de {sabadoEtiqueta}
           </p>
         </div>
         {pip.soportado && (
@@ -434,12 +473,81 @@ export function ProgramaClient(): React.JSX.Element {
                   programaTerminado={programaTerminado}
                   segundosParaFin={segundosParaFin}
                   segundosParaInicio={segundosParaInicio}
+                  encargado={encargadosPorSlot[i] ?? null}
+                  himnoEtiqueta={i === 0 ? "Himno inicial" : null}
+                  himnoValor={i === 0 ? himnoInicial : null}
                 />
               );
             })}
+
+            {/* Cierre de la escuela sabática: no tiene bloque de tiempo, se
+                muestra como tarjeta final con su encargado y el himno final. */}
+            <CierreFila
+              encargado={encargadosPorSlot[SLOT_CIERRE] ?? null}
+              himnoFinal={himnoFinal}
+            />
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Tarjeta de cierre del programa. No participa del countdown (el cronograma
+ * cronometrado termina en el Repaso); muestra el encargado del Cierre y el
+ * himno final del sábado.
+ */
+function CierreFila({
+  encargado,
+  himnoFinal,
+}: {
+  encargado: Encargado | null;
+  himnoFinal: string;
+}): React.JSX.Element {
+  return (
+    <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/50">
+              Cierre
+            </span>
+          </div>
+          <h3 className="mt-1.5 font-semibold text-foreground">
+            Cierre de la escuela sabática
+          </h3>
+          <p className="text-sm text-foreground/60">
+            Palabras finales y despedida de la Escuela Sabática.
+          </p>
+          {himnoFinal ? (
+            <HimnoLinea etiqueta="Himno final" valor={himnoFinal} />
+          ) : null}
+        </div>
+
+        <EncargadoTarjeta encargado={encargado} />
+      </div>
+    </div>
+  );
+}
+
+/** Línea con un himno (etiqueta + valor) para mostrar dentro de un bloque. */
+function HimnoLinea({
+  etiqueta,
+  valor,
+}: {
+  etiqueta: string;
+  valor: string;
+}): React.JSX.Element {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <span className="text-[11px] font-medium uppercase tracking-wide text-foreground/40">
+        {etiqueta}
+      </span>
+      <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500/10 px-2.5 py-1 text-sm font-medium text-indigo-300">
+        <span aria-hidden>🎵</span>
+        {valor}
+      </span>
     </div>
   );
 }
@@ -534,6 +642,98 @@ function PipTimer({ foco }: { foco: FocoTimer }): React.JSX.Element {
           </p>
         </>
       )}
+      {foco.encargado && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            margin: "12px 0 0",
+            maxWidth: "100%",
+          }}
+        >
+          {foco.encargado.fotoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={foco.encargado.fotoUrl}
+              alt=""
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "9999px",
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "9999px",
+                background: "rgba(127,127,127,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "12px",
+                flexShrink: 0,
+              }}
+            >
+              👤
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              opacity: 0.85,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {foco.encargado.nombre}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Tarjeta del encargado (foto + nombre) que se muestra a la derecha del bloque. */
+function EncargadoTarjeta({ encargado }: { encargado: Encargado | null }): React.JSX.Element {
+  const iniciales = encargado
+    ? encargado.nombre
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join("")
+    : "";
+  return (
+    <div className="flex w-24 shrink-0 flex-col items-center gap-1.5 text-center sm:w-28">
+      {encargado?.fotoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={encargado.fotoUrl}
+          alt=""
+          className="h-14 w-14 rounded-full border border-foreground/10 object-cover sm:h-16 sm:w-16"
+        />
+      ) : (
+        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-foreground/10 bg-foreground/5 text-sm font-semibold text-foreground/40 sm:h-16 sm:w-16">
+          {encargado ? iniciales : "👤"}
+        </div>
+      )}
+      <span className="text-[10px] font-medium uppercase tracking-wide text-foreground/40">
+        Encargado
+      </span>
+      {encargado ? (
+        <span className="text-xs font-medium leading-tight text-foreground/80">
+          {encargado.nombre}
+        </span>
+      ) : (
+        <span className="text-xs leading-tight text-foreground/40">Sin asignar</span>
+      )}
     </div>
   );
 }
@@ -546,6 +746,9 @@ function BloqueFila({
   programaTerminado,
   segundosParaFin,
   segundosParaInicio,
+  encargado,
+  himnoEtiqueta,
+  himnoValor,
 }: {
   bloque: BloquePrograma;
   activo: boolean;
@@ -559,6 +762,12 @@ function BloqueFila({
   segundosParaFin: number;
   /** Segundos que faltan para que este bloque comience (0 si ya empezó). */
   segundosParaInicio: number;
+  /** Encargado asignado a este momento (o null si no hay). */
+  encargado: Encargado | null;
+  /** Etiqueta del himno a mostrar en este bloque (o null si no aplica). */
+  himnoEtiqueta: string | null;
+  /** Valor del himno a mostrar (o null/"" si no hay). */
+  himnoValor: string | null;
 }): React.JSX.Element {
   const duracionMin = bloque.finMin - bloque.inicioMin;
   // Alerta cuando faltan 60s o menos para el fin de un bloque en curso.
@@ -583,39 +792,51 @@ function BloqueFila({
           : "border-foreground/10 bg-foreground/[0.02]"
         }`}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-sm font-medium text-foreground/70">
-          {formatearHora12(bloque.inicioMin)} – {formatearHora12(bloque.finMin)}
-        </span>
-        <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/50">
-          {duracionMin} min
-        </span>
-        {bloque.lugar && (
-          <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/60">
-            {bloque.lugar}
-          </span>
-        )}
-        {activo && (
-          <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-semibold text-green-400">
-            EN CURSO
-          </span>
-        )}
-        {atenuado && (
-          <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/40">
-            {programaTerminado ? "✓ Completado" : "Sin iniciar"}
-          </span>
-        )}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm font-medium text-foreground/70">
+              {formatearHora12(bloque.inicioMin)} – {formatearHora12(bloque.finMin)}
+            </span>
+            <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/50">
+              {duracionMin} min
+            </span>
+            {bloque.lugar && (
+              <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/60">
+                {bloque.lugar}
+              </span>
+            )}
+            {activo && (
+              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-semibold text-green-400">
+                EN CURSO
+              </span>
+            )}
+            {atenuado && (
+              <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-xs text-foreground/40">
+                {programaTerminado ? "✓ Completado" : "Sin iniciar"}
+              </span>
+            )}
+          </div>
+          <h3 className="mt-1.5 font-semibold text-foreground">{bloque.titulo}</h3>
+          <p className="text-sm text-foreground/60">{bloque.responsable}</p>
+
+          <ul className="mt-2 space-y-1">
+            {bloque.detalle.map((d, i) => (
+              <li key={i} className="flex gap-2 text-sm text-foreground/50">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-foreground/30" />
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+
+          {himnoEtiqueta && himnoValor ? (
+            <HimnoLinea etiqueta={himnoEtiqueta} valor={himnoValor} />
+          ) : null}
+        </div>
+
+        {/* Encargado del momento (data de /encargados), a la derecha con foto */}
+        <EncargadoTarjeta encargado={encargado} />
       </div>
-      <h3 className="mt-1.5 font-semibold text-foreground">{bloque.titulo}</h3>
-      <p className="text-sm text-foreground/60">{bloque.responsable}</p>
-      <ul className="mt-2 space-y-1">
-        {bloque.detalle.map((d, i) => (
-          <li key={i} className="flex gap-2 text-sm text-foreground/50">
-            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-foreground/30" />
-            <span>{d}</span>
-          </li>
-        ))}
-      </ul>
 
       {/* Countdown grande: cuánto resta para que ESTE bloque termine */}
       <div

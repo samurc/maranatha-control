@@ -8,12 +8,21 @@
 /** Cantidad de próximos sábados que se muestran como filas en la zona de arrastre. */
 export const CANTIDAD_SABADOS = 13;
 
-/** Rol/tarea de cada casillero (índice = número de slot). */
+/**
+ * Rol/tarea de cada casillero (índice = número de slot), en el orden de los
+ * momentos del programa de Escuela Sabática.
+ */
 export const ETIQUETAS_CASILLERO = [
-  "Repaso de lección",
-  "Informe misionero",
-  "Bienvenida, himnos, oración",
+  "Alabanzas e Himno Inicial",
+  "Bienvenida, Oración e Informativo Misionero",
+  "Compañerismo y Pastoreo",
+  "Minutos Misioneros, Registro y Ofrendas",
+  "Repaso Interactivo de la Lección",
+  "Cierre de la escuela sabática",
 ] as const;
+
+/** Número de casilleros por sábado (derivado de las etiquetas). */
+export const CANTIDAD_CASILLEROS = ETIQUETAS_CASILLERO.length;
 
 /** Estado de un sábado en el módulo Encargados. */
 export type EstadoSabado = "por_confirmar" | "confirmado";

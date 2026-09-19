@@ -4,16 +4,23 @@ import { revalidatePath } from "next/cache";
 import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import {
+  CANTIDAD_CASILLEROS,
   CANTIDAD_SABADOS,
   ETIQUETAS_CASILLERO,
   proximosSabados,
 } from "./sabados";
 
+/** Valida que `slot` sea un índice de casillero válido (0..CANTIDAD_CASILLEROS-1). */
+function slotValido(slot: number): boolean {
+  return Number.isInteger(slot) && slot >= 0 && slot < CANTIDAD_CASILLEROS;
+}
+
 /**
  * Server Actions del módulo "Encargados" (solo `secretario`).
  *
- * Cada Sábado disponible tiene 3 casilleros (slots 0, 1 y 2) donde se
- * puede asignar un Participante activo como encargado. La asignación se
+ * Cada Sábado disponible tiene un casillero por cada momento del programa
+ * de Escuela Sabática (ver `ETIQUETAS_CASILLERO`) donde se puede asignar un
+ * Participante activo como encargado. La asignación se
  * persiste en la colección `encargados` con un ID determinístico
  * compuesto por el alcance territorial + fecha del sábado + número de
  * casillero, de modo que reasignar el mismo casillero sobrescribe la
@@ -61,7 +68,7 @@ export async function asignarEncargado(formData: FormData): Promise<void> {
   const participanteId = String(formData.get("participanteId") ?? "");
 
   if (!FECHA_ISO_RE.test(fechaISO)) throw new Error("Fecha inválida");
-  if (!Number.isInteger(slot) || slot < 0 || slot > 2) throw new Error("Casillero inválido");
+  if (!slotValido(slot)) throw new Error("Casillero inválido");
   if (participanteId.length === 0) throw new Error("Participante inválido");
 
   const db = obtenerFirestoreAdmin();
@@ -215,10 +222,10 @@ export async function moverEncargado(formData: FormData): Promise<void> {
   if (!FECHA_ISO_RE.test(fechaOrigen) || !FECHA_ISO_RE.test(fechaDestino)) {
     throw new Error("Fecha inválida");
   }
-  if (!Number.isInteger(slotOrigen) || slotOrigen < 0 || slotOrigen > 2) {
+  if (!slotValido(slotOrigen)) {
     throw new Error("Casillero de origen inválido");
   }
-  if (!Number.isInteger(slotDestino) || slotDestino < 0 || slotDestino > 2) {
+  if (!slotValido(slotDestino)) {
     throw new Error("Casillero de destino inválido");
   }
   if (fechaOrigen === fechaDestino && slotOrigen === slotDestino) {
@@ -293,7 +300,7 @@ export async function quitarEncargado(formData: FormData): Promise<void> {
   const slot = Number(formData.get("slot"));
 
   if (!FECHA_ISO_RE.test(fechaISO)) throw new Error("Fecha inválida");
-  if (!Number.isInteger(slot) || slot < 0 || slot > 2) throw new Error("Casillero inválido");
+  if (!slotValido(slot)) throw new Error("Casillero inválido");
 
   const db = obtenerFirestoreAdmin();
   const docId = idAsignacion(alcance.iglesiaId, alcance.unidadId, fechaISO, slot);
@@ -390,7 +397,7 @@ export async function exportarRolExcel(): Promise<string> {
   hoja.columns = columnas.map((titulo, i) => ({
     header: titulo,
     key: `c${i}`,
-    width: i < 2 ? 22 : i === 2 ? 16 : 26,
+    width: i < 2 ? 22 : i === 2 ? 16 : 30,
   }));
 
   // Título en una fila superior fusionada.
@@ -423,14 +430,10 @@ export async function exportarRolExcel(): Promise<string> {
       (estados[sabado.fechaISO] ?? "por_confirmar") === "confirmado"
         ? "Confirmado"
         : "Por confirmar";
-    hoja.addRow([
-      sabado.fechaISO,
-      sabado.etiqueta,
-      estado,
-      nombreEn(sabado.fechaISO, 0),
-      nombreEn(sabado.fechaISO, 1),
-      nombreEn(sabado.fechaISO, 2),
-    ]);
+    const nombresCasilleros = Array.from({ length: CANTIDAD_CASILLEROS }, (_, slot) =>
+      nombreEn(sabado.fechaISO, slot)
+    );
+    hoja.addRow([sabado.fechaISO, sabado.etiqueta, estado, ...nombresCasilleros]);
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
