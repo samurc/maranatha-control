@@ -37,6 +37,25 @@ export interface AsistenciaParticipante {
   /** "P7", "A", "F", "V"... calculado por `calcularCodigoVisual` (tarea 3.6). */
   readonly codigoVisual: string;
   readonly seguimientoPastoral: readonly SeguimientoPastoral[];
+  /**
+   * `participanteId` del Participante activo asignado como responsable de
+   * contactar a este Participante cuando estuvo ausente. Opcional: solo se
+   * establece desde la vista /registros al asignar un responsable de
+   * seguimiento a un ausente.
+   */
+  readonly responsableId?: string;
+  /**
+   * `true` si la ausencia fue justificada y, por tanto, queda exonerada de la
+   * asignación de un responsable de seguimiento. Al justificar se limpia
+   * `responsableId`. Se establece desde la vista /registros.
+   */
+  readonly justificado?: boolean;
+  /**
+   * Estado de contacto del seguimiento al ausente: `true` si ya fue contactado,
+   * `false` si aún no. Se establece desde la vista /registros con los botones
+   * "Contactado" / "Sin contactar".
+   */
+  readonly contactado?: boolean;
 }
 
 /** Totales rápidos agregados de un Registro_Sabatico (`calcularTotalesRapidos`, tarea 6.1). */

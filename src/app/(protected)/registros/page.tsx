@@ -1,6 +1,8 @@
 import { SectionGuard } from "../../../presentation/components/section-guard";
 import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
+import { AusentesCell, type AusenteVista, type ParticipanteOpcion } from "./registros-client";
+import { asignarResponsableAusente, justificarAusente, marcarContactoAusente } from "./actions";
 
 export default async function RegistrosPage(): Promise<React.JSX.Element> {
   const claims = await obtenerClaimsDeSesion();
@@ -30,8 +32,58 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
         return keyB - keyA;
       });
 
+    // Cargar participantes del ámbito para: (a) resolver nombres de ausentes,
+    // (b) ofrecer la lista de participantes activos como posibles responsables.
+    const participantesQuery = esRolOperativo && claims.unidadId
+      ? db.collection("participantes").where("unidadId", "==", claims.unidadId).limit(500)
+      : esRolOperativo && claims.iglesiaId
+        ? db.collection("participantes").where("iglesiaId", "==", claims.iglesiaId).limit(500)
+        : db.collection("participantes").limit(500);
+    const participantesSnap = await participantesQuery.get();
+
+    const nombrePorId = new Map<string, string>();
+    const fotoPorId = new Map<string, string>();
+    const participantesActivos: ParticipanteOpcion[] = [];
+    for (const doc of participantesSnap.docs) {
+      const p = doc.data() as { nombre?: string; apellido?: string; estado?: string; fotoUrl?: string };
+      const nombreCompleto = `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim() || doc.id;
+      nombrePorId.set(doc.id, nombreCompleto);
+      if (typeof p.fotoUrl === "string" && p.fotoUrl.length > 0) {
+        fotoPorId.set(doc.id, p.fotoUrl);
+      }
+      if (p.estado === "activo") {
+        participantesActivos.push({ id: doc.id, nombre: nombreCompleto });
+      }
+    }
+    participantesActivos.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+    // Derivar la lista de ausentes por registro a partir del mapa `asistencia`
+    // (presente === false), resolviendo el nombre desde `nombrePorId`.
+    const ausentesPorRegistro = new Map<string, AusenteVista[]>();
+    for (const r of registros) {
+      const asistencia = ((r as Record<string, unknown>).asistencia ?? {}) as Record<
+        string,
+        { presente?: boolean; responsableId?: string | null; justificado?: boolean; contactado?: boolean }
+      >;
+      const lista: AusenteVista[] = [];
+      for (const [pid, entrada] of Object.entries(asistencia)) {
+        if (entrada?.presente === false) {
+          lista.push({
+            participanteId: pid,
+            nombre: nombrePorId.get(pid) ?? pid,
+            fotoUrl: fotoPorId.get(pid) ?? null,
+            responsableId: entrada.responsableId ?? null,
+            justificado: entrada.justificado ?? false,
+            contactado: typeof entrada.contactado === "boolean" ? entrada.contactado : null,
+          });
+        }
+      }
+      lista.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+      ausentesPorRegistro.set(r.id as string, lista);
+    }
+
     // Cargar indicadores semanales
-    let indicadores: Record<string, string> = {};
+    const indicadores: Record<string, string> = {};
     if (esRolOperativo && claims.iglesiaId && claims.unidadId) {
       const ahora = new Date();
       const trimestre = Math.ceil((ahora.getMonth() + 1) / 3);
@@ -109,6 +161,8 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
                 const totales = r.totalesRapidos as { presentes: number; ausentes: number; visitas: number } | undefined;
                 const sabado = r.sabadoEclesiastico as { fechaISO?: string; numeroSabado?: number; numeroTrimestre?: number } | undefined;
                 const numSabado = sabado?.numeroSabado;
+                const ausentesLista = ausentesPorRegistro.get(r.id as string) ?? [];
+                const fechaLabel = `${sabado?.fechaISO ?? "—"} (T${sabado?.numeroTrimestre} S${numSabado})`;
                 return (
                   <tr key={r.id as string} className="hover:bg-foreground/[0.02] transition-colors">
                     <td className="px-4 py-3 text-foreground font-medium">
@@ -118,7 +172,19 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-green-500 font-medium">{totales?.presentes ?? 0}</td>
-                    <td className="px-4 py-3 text-right text-red-400 font-medium">{totales?.ausentes ?? 0}</td>
+                    <td className="px-4 py-3 text-right">
+                      <AusentesCell
+                        variant="table"
+                        registroId={r.id as string}
+                        fechaLabel={fechaLabel}
+                        totalAusentes={totales?.ausentes ?? ausentesLista.length}
+                        ausentes={ausentesLista}
+                        participantesActivos={participantesActivos}
+                        asignarResponsable={asignarResponsableAusente}
+                        justificarAusente={justificarAusente}
+                        marcarContacto={marcarContactoAusente}
+                      />
+                    </td>
                     {esRolOperativo && Object.keys(indicadores).length > 0 && INDICADORES_LABELS.map(({ prefijo }) => {
                       const val = numSabado != null ? (indicadores[`${prefijo}-${numSabado}`] ?? "—") : "—";
                       return (
@@ -148,7 +214,9 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
             const totales = r.totalesRapidos as { presentes: number; ausentes: number; visitas: number } | undefined;
             const sabado = r.sabadoEclesiastico as { fechaISO?: string; numeroSabado?: number; numeroTrimestre?: number } | undefined;
             const numSabado = sabado?.numeroSabado;
-            
+            const ausentesLista = ausentesPorRegistro.get(r.id as string) ?? [];
+            const fechaLabel = `${sabado?.fechaISO ?? "—"} (T${sabado?.numeroTrimestre} S${numSabado})`;
+
             return (
               <div key={r.id as string} className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 space-y-3">
                 <div className="flex justify-between items-center border-b border-foreground/5 pb-2">
@@ -159,16 +227,23 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
                     T{sabado?.numeroTrimestre} S{numSabado}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-green-500/5 rounded p-2 text-center">
                     <p className="text-[10px] uppercase text-green-500/70 font-semibold mb-0.5">Presentes</p>
                     <p className="text-lg font-bold text-green-500">{totales?.presentes ?? 0}</p>
                   </div>
-                  <div className="bg-red-500/5 rounded p-2 text-center">
-                    <p className="text-[10px] uppercase text-red-500/70 font-semibold mb-0.5">Ausentes</p>
-                    <p className="text-lg font-bold text-red-400">{totales?.ausentes ?? 0}</p>
-                  </div>
+                  <AusentesCell
+                    variant="card"
+                    registroId={r.id as string}
+                    fechaLabel={fechaLabel}
+                    totalAusentes={totales?.ausentes ?? ausentesLista.length}
+                    ausentes={ausentesLista}
+                    participantesActivos={participantesActivos}
+                    asignarResponsable={asignarResponsableAusente}
+                    justificarAusente={justificarAusente}
+                    marcarContacto={marcarContactoAusente}
+                  />
                 </div>
 
                 {esRolOperativo && Object.keys(indicadores).length > 0 && (
