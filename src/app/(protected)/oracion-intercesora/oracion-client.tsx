@@ -6,7 +6,6 @@ import { exportarOracionImagen } from "./exportar-oracion-imagen";
 export interface PresenteOracion {
   readonly id: string;
   readonly nombre: string;
-  readonly fotoUrl: string | null;
   /** "hombre" | "mujer" | null (sin definir). */
   readonly genero: string | null;
 }
@@ -20,6 +19,8 @@ interface OracionClientProps {
   readonly sabados: readonly SabadoOpcion[];
   /** Presentes por registroId. */
   readonly presentesPorRegistro: Record<string, PresenteOracion[]>;
+  /** Participantes con estado "activo" del ámbito (fuente alternativa). */
+  readonly activos: readonly PresenteOracion[];
   /** Grupos guardados por registroId (ids por género o mixtos). */
   readonly gruposPorRegistro: Record<string, { hombres: string[][]; mujeres: string[][]; mixtos: string[][]; mixto: boolean }>;
   readonly guardarGrupos: (formData: FormData) => Promise<void>;
@@ -52,18 +53,6 @@ function armarGrupos(ids: readonly string[], tamano: number): Grupo[] {
 
 const TAMANOS = [2, 3, 4, 5] as const;
 
-function Avatar({ p }: { p: PresenteOracion }): React.JSX.Element {
-  if (p.fotoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={p.fotoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover bg-foreground/5" />;
-  }
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-xs font-bold text-blue-500">
-      {p.nombre.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
 /**
  * Vista de Oración Intercesora: agrupa a los presentes de un sábado en parejas
  * del mismo género. El emparejamiento es aleatorio, se puede rebarajar y, por
@@ -72,18 +61,24 @@ function Avatar({ p }: { p: PresenteOracion }): React.JSX.Element {
 export function OracionClient({
   sabados,
   presentesPorRegistro,
+  activos,
   gruposPorRegistro,
   guardarGrupos,
 }: OracionClientProps): React.JSX.Element {
   const [isPending, startTransition] = useTransition();
   const [exportando, setExportando] = useState(false);
+  // Si está activo, la fuente son los presentes del sábado; si no, los activos.
+  const [soloPresentes, setSoloPresentes] = useState<boolean>(true);
 
   // Sábado seleccionado en estado local (por defecto, el primero disponible).
   const [registroSeleccionado, setRegistroSeleccionado] = useState<string | null>(
     sabados[0]?.registroId ?? null
   );
 
-  const presentes = registroSeleccionado ? (presentesPorRegistro[registroSeleccionado] ?? []) : [];
+  // Personas a agrupar: presentes del sábado o participantes activos del ámbito.
+  const presentes = soloPresentes
+    ? (registroSeleccionado ? (presentesPorRegistro[registroSeleccionado] ?? []) : [])
+    : activos;
   const gruposGuardados = registroSeleccionado ? (gruposPorRegistro[registroSeleccionado] ?? null) : null;
 
   const porId = new Map(presentes.map((p) => [p.id, p]));
@@ -121,14 +116,16 @@ export function OracionClient({
   const idsConGenero = () =>
     presentes.filter((p) => p.genero === "hombre" || p.genero === "mujer").map((p) => p.id);
 
-  // Reset al cambiar de sábado (patrón React "ajustar estado al cambiar una
-  // clave", sin efecto). Si el sábado tiene grupos guardados, se muestran
-  // directamente; si no, se pide primero el tamaño (generado = false).
-  const [claveActual, setClaveActual] = useState<string | null>(registroSeleccionado);
-  if (claveActual !== registroSeleccionado) {
-    setClaveActual(registroSeleccionado);
+  // Reset al cambiar de sábado o de fuente de personas (patrón React "ajustar
+  // estado al cambiar una clave", sin efecto). Los grupos guardados solo se
+  // reutilizan cuando la fuente son los presentes del sábado; con la fuente
+  // "activos" siempre se parte del paso de generar.
+  const clave = `${registroSeleccionado ?? ""}|${soloPresentes ? "presentes" : "activos"}`;
+  const [claveActual, setClaveActual] = useState<string>(clave);
+  if (claveActual !== clave) {
+    setClaveActual(clave);
     setGrupoActivo(null);
-    if (gruposGuardados) {
+    if (soloPresentes && gruposGuardados) {
       const esMixto = gruposGuardados.mixto === true;
       setModoMixto(esMixto);
       if (esMixto) {
@@ -149,9 +146,13 @@ export function OracionClient({
     }
   }
 
-  /** Persiste los grupos actuales para el registro seleccionado. */
+  /**
+   * Persiste los grupos actuales para el registro seleccionado. Solo aplica
+   * cuando la fuente son los presentes del sábado; con la fuente "activos" los
+   * grupos son efímeros y no deben sobrescribir lo guardado por asistencia.
+   */
   function persistir(payload: { hombres: Grupo[]; mujeres: Grupo[]; mixtos: Grupo[]; mixto: boolean }) {
-    if (!registroSeleccionado) return;
+    if (!registroSeleccionado || !soloPresentes) return;
     const fd = new FormData();
     fd.set("registroId", registroSeleccionado);
     fd.set("grupos", JSON.stringify(payload));
@@ -235,6 +236,7 @@ export function OracionClient({
   }
 
   function renderColumna(columna: "hombre" | "mujer" | "mixto", grupos: Grupo[], color: string): React.JSX.Element {
+    const chipStyle = { borderColor: `${color}55`, backgroundColor: `${color}14`, color };
     return (
       <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 space-y-2">
         {grupos.map((grupo, idx) => {
@@ -254,17 +256,22 @@ export function OracionClient({
                 const pid = e.dataTransfer.getData(MIME_ORIGEN) || e.dataTransfer.getData("text/plain");
                 if (pid) moverA(columna, pid, idx);
               }}
-              className={`rounded-lg border px-3 py-2 transition-colors ${activo ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30" : "border-foreground/10 bg-background"
+              className={`rounded-lg border px-3 py-2 transition-colors ${activo ? "border-foreground/40 bg-foreground/[0.06] ring-2 ring-foreground/20" : "border-foreground/10 bg-background"
                 }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="w-5 shrink-0 text-center text-xs font-bold text-foreground/40">{idx + 1}</span>
-                <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                  style={{ backgroundColor: `${color}1f`, color }}
+                >
+                  {idx + 1}
+                </span>
+                <div className="flex flex-1 flex-wrap items-center gap-1.5 min-w-0">
                   {grupo.map((id) => {
                     const p = porId.get(id);
                     if (!p) return null;
                     return (
-                      <div
+                      <span
                         key={id}
                         draggable
                         onDragStart={(e) => {
@@ -272,12 +279,13 @@ export function OracionClient({
                           e.dataTransfer.setData("text/plain", id);
                           e.dataTransfer.effectAllowed = "move";
                         }}
-                        className="flex cursor-grab items-center gap-2 active:cursor-grabbing min-w-0"
+                        style={chipStyle}
+                        className="group inline-flex max-w-full cursor-grab items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-medium transition-shadow hover:shadow-sm active:cursor-grabbing active:opacity-70"
                         title="Arrastra a otro grupo"
                       >
-                        <Avatar p={p} />
-                        <span className="truncate text-sm text-foreground">{p.nombre}</span>
-                      </div>
+                        <span aria-hidden className="opacity-40 group-hover:opacity-70">⠿</span>
+                        <span className="truncate">{p.nombre}</span>
+                      </span>
                     );
                   })}
                   {grupo.length === 1 && (
@@ -341,24 +349,44 @@ export function OracionClient({
           )}
         </div>
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-foreground/80 cursor-pointer w-fit">
+        <input
+          type="checkbox"
+          checked={soloPresentes}
+          onChange={(e) => setSoloPresentes(e.target.checked)}
+          className="h-4 w-4 rounded border-foreground/30 text-blue-600 focus:ring-blue-500/30"
+        />
+        Considerar solo los presentes del sábado
+        <span className="text-xs text-foreground/40">
+          {soloPresentes ? "" : `(usando ${activos.length} participante${activos.length !== 1 ? "s" : ""} activo${activos.length !== 1 ? "s" : ""})`}
+        </span>
+      </label>
+
       {isPending && (
         <p className="text-xs text-foreground/40">Guardando…</p>
       )}
 
-      {registroSeleccionado === null ? (
+      {soloPresentes && registroSeleccionado === null ? (
         <p className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-8 text-center text-sm text-foreground/50">
           Selecciona un sábado para generar las parejas.
         </p>
       ) : presentes.length === 0 ? (
         <p className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-8 text-center text-sm text-foreground/50">
-          No hay alumnos presentes registrados para este sábado.
+          {soloPresentes
+            ? "No hay alumnos presentes registrados para este sábado."
+            : "No hay participantes activos en tu ámbito."}
         </p>
       ) : !generado ? (
         <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-8 flex flex-col items-center gap-4 text-center">
           <div>
             <p className="text-sm font-medium text-foreground">¿Cuántos integrantes por grupo?</p>
             <p className="mt-1 text-xs text-foreground/50">
-              {presentes.length} presente{presentes.length !== 1 ? "s" : ""}. Elige el tamaño y genera los grupos.
+              {presentes.length}{" "}
+              {soloPresentes
+                ? `presente${presentes.length !== 1 ? "s" : ""}`
+                : `participante${presentes.length !== 1 ? "s" : ""} activo${presentes.length !== 1 ? "s" : ""}`}
+              . Elige el tamaño y genera los grupos.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -401,7 +429,7 @@ export function OracionClient({
         </div>
       ) : modoMixto ? (
         <div className="space-y-4">
-          {renderColumna("mixto", gruposMixtos, "#8b5cf6")}
+          {renderColumna("mixto", gruposMixtos, "#6b7280")}
           {sinGenero.length > 0 && (
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">
@@ -412,8 +440,7 @@ export function OracionClient({
               </p>
               <div className="flex flex-wrap gap-2">
                 {sinGenero.map((p) => (
-                  <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full border border-foreground/10 bg-background px-2 py-1 text-xs text-foreground/70">
-                    <Avatar p={p} />
+                  <span key={p.id} className="inline-flex items-center rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">
                     {p.nombre}
                   </span>
                 ))}
@@ -423,8 +450,8 @@ export function OracionClient({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {renderColumna("hombre", gruposHombres, "#0ea5e9")}
-          {renderColumna("mujer", gruposMujeres, "#ec4899")}
+          {renderColumna("hombre", gruposHombres, "#64748b")}
+          {renderColumna("mujer", gruposMujeres, "#78716c")}
           {sinGenero.length > 0 && (
             <div className="md:col-span-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">
@@ -435,8 +462,7 @@ export function OracionClient({
               </p>
               <div className="flex flex-wrap gap-2">
                 {sinGenero.map((p) => (
-                  <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full border border-foreground/10 bg-background px-2 py-1 text-xs text-foreground/70">
-                    <Avatar p={p} />
+                  <span key={p.id} className="inline-flex items-center rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">
                     {p.nombre}
                   </span>
                 ))}

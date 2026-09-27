@@ -49,15 +49,19 @@ export default async function OracionIntercesoraPage(): Promise<React.JSX.Elemen
         : db.collection("participantes").limit(500);
     const participantesSnap = await participantesQuery.get();
     const participantePorId = new Map<string, PresenteOracion>();
+    // Participantes con estado "activo" (fuente alternativa a los presentes).
+    const activos: PresenteOracion[] = [];
     for (const doc of participantesSnap.docs) {
-      const p = doc.data() as { nombre?: string; apellido?: string; fotoUrl?: string; genero?: string };
-      participantePorId.set(doc.id, {
+      const p = doc.data() as { nombre?: string; apellido?: string; genero?: string; estado?: string };
+      const persona: PresenteOracion = {
         id: doc.id,
         nombre: `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim() || doc.id,
-        fotoUrl: typeof p.fotoUrl === "string" && p.fotoUrl.length > 0 ? p.fotoUrl : null,
         genero: p.genero === "hombre" || p.genero === "mujer" ? p.genero : null,
-      });
+      };
+      participantePorId.set(doc.id, persona);
+      if (p.estado === "activo") activos.push(persona);
     }
+    activos.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
     // Presentes por registro (para todos los sábados).
     const presentesPorRegistro: Record<string, PresenteOracion[]> = {};
@@ -104,6 +108,7 @@ export default async function OracionIntercesoraPage(): Promise<React.JSX.Elemen
       <OracionClient
         sabados={sabados}
         presentesPorRegistro={presentesPorRegistro}
+        activos={activos}
         gruposPorRegistro={gruposPorRegistro}
         guardarGrupos={guardarGruposOracion}
       />

@@ -2,8 +2,25 @@ import { obtenerClaimsDeSesion } from "../../../presentation/session";
 import { obtenerFirestoreAdmin } from "../../../infrastructure/firestore-admin";
 import { redirect } from "next/navigation";
 import { AsistenciaClient } from "./asistencia-client";
+import { SelectorTrimestre } from "../../../presentation/components/selector-trimestre";
 
-export default async function AsistenciaPage(): Promise<React.JSX.Element> {
+/** Normaliza un valor de search param a entero dentro de [min, max]; si no, devuelve el fallback. */
+function paramEntero(
+  valor: string | string[] | undefined,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  const raw = Array.isArray(valor) ? valor[0] : valor;
+  const n = raw != null ? parseInt(raw, 10) : NaN;
+  return Number.isInteger(n) && n >= min && n <= max ? n : fallback;
+}
+
+export default async function AsistenciaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}): Promise<React.JSX.Element> {
   const claims = await obtenerClaimsDeSesion();
 
   if (claims === null) {
@@ -57,17 +74,23 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
     nombreIglesia = iglesiaDoc.exists ? (iglesiaDoc.data()?.nombre as string) : "";
   }
 
-  // Obtener registros sabáticos existentes para esta unidad (trimestre actual)
+  // Periodo: por defecto el trimestre/año actuales; se puede cambiar con el
+  // selector, que refleja su estado en los search params (?anio=&trimestre=).
   const ahora = new Date();
-  const trimestre = Math.ceil((ahora.getMonth() + 1) / 3) as 1 | 2 | 3 | 4;
-  const anio = ahora.getFullYear();
+  const anioActual = ahora.getFullYear();
+  const trimestreActual = Math.ceil((ahora.getMonth() + 1) / 3);
+  const sp = await searchParams;
+  const anio = paramEntero(sp.anio, anioActual - 5, anioActual + 1, anioActual);
+  const trimestre = paramEntero(sp.trimestre, 1, 4, trimestreActual) as 1 | 2 | 3 | 4;
+  // Años ofrecidos en el selector: actual y los cinco anteriores.
+  const aniosDisponibles = Array.from({ length: 6 }, (_, i) => anioActual - i);
 
   const registrosQuery = claims.unidadId
     ? db.collection("registros_sabaticos").where("unidadId", "==", claims.unidadId)
     : null;
 
-  let registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number }>> = {};
-  let indicadoresExistentes: Record<string, string> = {};
+  const registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number; justificado: boolean }>> = {};
+  const indicadoresExistentes: Record<string, string> = {};
 
   if (registrosQuery) {
     const registrosSnap = await registrosQuery.get();
@@ -76,12 +99,13 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
       const sabado = data.sabadoEclesiastico as { anio: number; numeroTrimestre: number; numeroSabado: number } | undefined;
       if (sabado && sabado.anio === anio && sabado.numeroTrimestre === trimestre) {
         const clave = `S${sabado.numeroSabado}`;
-        const asistencia = (data.asistencia ?? {}) as Record<string, { presente: boolean; diasEstudio: number }>;
+        const asistencia = (data.asistencia ?? {}) as Record<string, { presente: boolean; diasEstudio: number; justificado?: boolean }>;
         registrosExistentes[clave] = {};
         for (const [pid, entry] of Object.entries(asistencia)) {
           registrosExistentes[clave]![pid] = {
             presente: entry.presente,
             diasEstudio: entry.diasEstudio,
+            justificado: entry.justificado === true,
           };
         }
       }
@@ -114,6 +138,9 @@ export default async function AsistenciaPage(): Promise<React.JSX.Element> {
       registrosExistentes={registrosExistentes}
       indicadoresExistentes={indicadoresExistentes}
       fechaHoy={ahora.toISOString().split("T")[0]!}
+      selector={
+        <SelectorTrimestre anio={anio} trimestre={trimestre} anios={aniosDisponibles} />
+      }
     />
   );
 }

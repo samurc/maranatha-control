@@ -25,9 +25,11 @@ interface AsistenciaClientProps {
   anio: number;
   iglesiaId: string;
   unidadId: string;
-  registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number }>>;
+  registrosExistentes: Record<string, Record<string, { presente: boolean; diasEstudio: number; justificado?: boolean }>>;
   indicadoresExistentes: Record<string, string>;
   fechaHoy: string; // "YYYY-MM-DD"
+  /** Selector de año/trimestre renderizado en el encabezado. */
+  selector?: React.ReactNode;
 }
 
 const SABADOS = Array.from({ length: 13 }, (_, i) => i + 1);
@@ -66,14 +68,15 @@ export function AsistenciaClient({
   registrosExistentes,
   indicadoresExistentes,
   fechaHoy,
+  selector,
 }: AsistenciaClientProps) {
   // Sábados cuya fecha ya pasó son read-only
   const sabadosCerrados = new Set<number>(
     SABADOS.filter((s) => calcularFechaSabado(anio, trimestre, s) < fechaHoy)
   );
 
-  // Estado: grilla[participanteId][`S${sabado}`] = CeldaValor
-  const [grilla, setGrilla] = useState<Record<string, Record<string, CeldaValor>>>(() => {
+  // Inicializadores derivados de los datos del servidor (dependen del periodo).
+  const construirGrilla = (): Record<string, Record<string, CeldaValor>> => {
     const inicial: Record<string, Record<string, CeldaValor>> = {};
     for (const p of participantes) {
       inicial[p.id] = {};
@@ -86,13 +89,45 @@ export function AsistenciaClient({
       }
     }
     return inicial;
-  });
+  };
+
+  const construirJustificados = (): Set<string> => {
+    const inicial = new Set<string>();
+    for (const p of participantes) {
+      for (const s of SABADOS) {
+        if (registrosExistentes[`S${s}`]?.[p.id]?.justificado === true) {
+          inicial.add(`${p.id}|S${s}`);
+        }
+      }
+    }
+    return inicial;
+  };
+
+  // Estado: grilla[participanteId][`S${sabado}`] = CeldaValor
+  const [grilla, setGrilla] = useState<Record<string, Record<string, CeldaValor>>>(construirGrilla);
+
+  // Celdas exoneradas (falta justificada). Clave: `${participanteId}|S${sabado}`.
+  // Se muestran con un asterisco en el recuadro.
+  const [justificados, setJustificados] = useState<Set<string>>(construirJustificados);
 
   const [, startTransition] = useTransition();
   const [indicadores, setIndicadores] = useState<Record<string, string>>(indicadoresExistentes);
 
   const [celdaMobile, setCeldaMobile] = useState<{ pIdx: number, sabado: number } | null>(null);
   const [exportando, setExportando] = useState(false);
+
+  // Al cambiar el periodo (año/trimestre) el servidor reenvía otros registros;
+  // reinicializar el estado local para reflejar el nuevo periodo. Patrón React
+  // de "ajustar estado al cambiar una clave" (sin efecto).
+  const clavePeriodo = `${anio}-T${trimestre}`;
+  const [periodoActual, setPeriodoActual] = useState<string>(clavePeriodo);
+  if (periodoActual !== clavePeriodo) {
+    setPeriodoActual(clavePeriodo);
+    setGrilla(construirGrilla());
+    setJustificados(construirJustificados());
+    setIndicadores(indicadoresExistentes);
+    setCeldaMobile(null);
+  }
 
   async function handleExportar() {
     setExportando(true);
@@ -136,6 +171,15 @@ export function AsistenciaClient({
         [`S${sabado}`]: valor,
       },
     }));
+    // Cambiar la celda manualmente limpia la exoneración: el guardado normal no
+    // envía `justificado`, por lo que el servidor la deja en false.
+    setJustificados((prev) => {
+      const clave = `${participanteId}|S${sabado}`;
+      if (!prev.has(clave)) return prev;
+      const siguiente = new Set(prev);
+      siguiente.delete(clave);
+      return siguiente;
+    });
 
     // Si el valor es vacío, enviar borrado de forma individual
     if (valor === "") {
@@ -176,6 +220,7 @@ export function AsistenciaClient({
       ...prev,
       [participanteId]: { ...prev[participanteId], [`S${sabado}`]: "F" },
     }));
+    setJustificados((prev) => new Set(prev).add(`${participanteId}|S${sabado}`));
     const formData = new FormData();
     formData.set("data", JSON.stringify({
       iglesiaId,
@@ -210,12 +255,16 @@ export function AsistenciaClient({
   function guardarSabado(sabado: number, grillaActual?: typeof grilla) {
     const datos = grillaActual ?? grilla;
     const clave = `S${sabado}`;
-    const asistencia: Record<string, { presente: boolean; diasEstudio: number }> = {};
+    const asistencia: Record<string, { presente: boolean; diasEstudio: number; justificado?: boolean }> = {};
     for (const p of participantes) {
       const celda = datos[p.id]?.[clave];
       if (celda !== undefined) {
         // Include even empty string to signal deletion
-        asistencia[p.id] = celdaAValor(celda);
+        const valor = celdaAValor(celda);
+        // Preservar la exoneración: al guardar el sábado completo, mantener
+        // `justificado` en las celdas ya exoneradas para no perder la marca.
+        const exonerado = celda === "F" && justificados.has(`${p.id}|${clave}`);
+        asistencia[p.id] = exonerado ? { ...valor, justificado: true } : valor;
       }
     }
 
@@ -248,6 +297,7 @@ export function AsistenciaClient({
             Anotar el número de días que estudió la lección (Ej: 7) o &quot;F&quot; si faltó
           </p>
         </div>
+        {selector && <div className="self-start">{selector}</div>}
         <div className="flex items-center gap-2 self-start">
           <button
             type="button"
@@ -324,61 +374,73 @@ export function AsistenciaClient({
                   const esPresente = valor.startsWith("P");
                   const esFalta = valor === "F";
                   const cerrado = sabadosCerrados.has(s);
+                  const esExonerado = esFalta && justificados.has(`${p.id}|${clave}`);
                   return (
                     <td key={s} className="px-0.5 py-0.5 border-l border-foreground/5">
-                      <input
-                        type="text"
-                        data-row={idx}
-                        data-col={s}
-                        value={valor}
-                        readOnly={cerrado}
-                        onClick={(e) => {
-                          if (cerrado) return;
-                          if (window.innerWidth < 768) {
-                            e.preventDefault();
-                            e.currentTarget.blur();
-                            setCeldaMobile({ pIdx: idx, sabado: s });
-                          }
-                        }}
-                        onFocus={(e) => {
-                          if (window.innerWidth < 768) {
-                            e.currentTarget.blur();
-                          }
-                        }}
-                        onChange={(e) => {
-                          if (cerrado) return;
-                          let v = e.target.value.toUpperCase();
-                          // Si el usuario ingresa un número del 0 al 7 directamente, anteponemos la "P"
-                          if (/^[0-7]$/.test(v)) {
-                            v = "P" + v;
-                          }
-                          // Validar: vacío, F, o P seguido de 0-7
-                          if (v === "" || v === "F" || v === "P" || /^P[0-7]$/.test(v)) {
-                            actualizarCelda(p.id, s, v);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Tab") {
-                            e.preventDefault();
-                            // Saltar a la celda inferior (mismo sábado, siguiente participante)
-                            const nextRow = idx + 1 < participantes.length ? idx + 1 : 0;
-                            const nextInput = document.querySelector<HTMLInputElement>(
-                              `input[data-row="${nextRow}"][data-col="${s}"]`
-                            );
-                            nextInput?.focus();
-                            nextInput?.select();
-                          }
-                        }}
-                        className={`w-full h-7 text-center text-xs font-medium rounded border transition-colors outline-none ${cerrado
-                          ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed"
-                          : esPresente
-                            ? "bg-blue-500/10 border-blue-500/30 text-blue-400 focus:ring-1 focus:ring-blue-500/50"
-                            : esFalta
-                              ? "bg-red-500/10 border-red-500/30 text-red-400 focus:ring-1 focus:ring-blue-500/50"
-                              : "bg-background border-foreground/10 text-foreground/60 focus:ring-1 focus:ring-blue-500/50"
-                          }`}
-                        placeholder={cerrado ? "" : "—"}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          data-row={idx}
+                          data-col={s}
+                          value={valor}
+                          readOnly={cerrado}
+                          onClick={(e) => {
+                            if (cerrado) return;
+                            if (window.innerWidth < 768) {
+                              e.preventDefault();
+                              e.currentTarget.blur();
+                              setCeldaMobile({ pIdx: idx, sabado: s });
+                            }
+                          }}
+                          onFocus={(e) => {
+                            if (window.innerWidth < 768) {
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          onChange={(e) => {
+                            if (cerrado) return;
+                            let v = e.target.value.toUpperCase();
+                            // Si el usuario ingresa un número del 0 al 7 directamente, anteponemos la "P"
+                            if (/^[0-7]$/.test(v)) {
+                              v = "P" + v;
+                            }
+                            // Validar: vacío, F, o P seguido de 0-7
+                            if (v === "" || v === "F" || v === "P" || /^P[0-7]$/.test(v)) {
+                              actualizarCelda(p.id, s, v);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Tab") {
+                              e.preventDefault();
+                              // Saltar a la celda inferior (mismo sábado, siguiente participante)
+                              const nextRow = idx + 1 < participantes.length ? idx + 1 : 0;
+                              const nextInput = document.querySelector<HTMLInputElement>(
+                                `input[data-row="${nextRow}"][data-col="${s}"]`
+                              );
+                              nextInput?.focus();
+                              nextInput?.select();
+                            }
+                          }}
+                          className={`w-full h-7 text-center text-xs font-medium rounded border transition-colors outline-none ${cerrado
+                            ? "bg-foreground/[0.02] border-foreground/5 text-foreground/30 cursor-not-allowed"
+                            : esPresente
+                              ? "bg-blue-500/10 border-blue-500/30 text-blue-400 focus:ring-1 focus:ring-blue-500/50"
+                              : esFalta
+                                ? "bg-red-500/10 border-red-500/30 text-red-400 focus:ring-1 focus:ring-blue-500/50"
+                                : "bg-background border-foreground/10 text-foreground/60 focus:ring-1 focus:ring-blue-500/50"
+                            }`}
+                          placeholder={cerrado ? "" : "—"}
+                        />
+                        {esExonerado && (
+                          <span
+                            className="pointer-events-none absolute -top-0.5 right-0.5 text-[11px] font-bold leading-none text-amber-500"
+                            title="Ausencia exonerada (justificada)"
+                            aria-label="Exonerado"
+                          >
+                            *
+                          </span>
+                        )}
+                      </div>
                     </td>
                   );
                 })}

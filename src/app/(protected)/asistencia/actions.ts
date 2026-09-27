@@ -100,4 +100,9 @@ export async function guardarAsistencia(formData: FormData) {
   }, { merge: true });
 
   revalidatePath("/asistencia");
+  // Escribir la asistencia también alimenta /registros (ausentes, justificados,
+  // presentes) y /oracion-intercesora (presentes); revalidar para que no queden
+  // con datos obsoletos tras exonerar o cambiar una marca.
+  revalidatePath("/registros");
+  revalidatePath("/oracion-intercesora");
 }

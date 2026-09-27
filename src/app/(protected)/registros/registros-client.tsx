@@ -65,7 +65,7 @@ export function AusentesCell({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [estado, setEstado] = useState<Record<string, FilaEstado>>(() => {
+  const construirEstadoInicial = (): Record<string, FilaEstado> => {
     const inicial: Record<string, FilaEstado> = {};
     for (const a of ausentes) {
       inicial[a.participanteId] = {
@@ -75,7 +75,23 @@ export function AusentesCell({
       };
     }
     return inicial;
-  });
+  };
+
+  const [estado, setEstado] = useState<Record<string, FilaEstado>>(construirEstadoInicial);
+
+  // Sincroniza el estado local cuando el servidor reenvía datos frescos (p. ej.
+  // al exonerar desde /asistencia, que revalida /registros). Patrón React de
+  // "ajustar estado durante el render al cambiar una clave derivada de props":
+  // la clave resume los campos del servidor de cada ausente.
+  const claveServidor = ausentes
+    .map((a) => `${a.participanteId}:${a.justificado ? 1 : 0}:${a.responsableId ?? ""}:${a.contactado ?? ""}`)
+    .join("|");
+  const [claveActual, setClaveActual] = useState<string>(claveServidor);
+  if (claveActual !== claveServidor) {
+    setClaveActual(claveServidor);
+    setEstado(construirEstadoInicial());
+  }
+
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("");

@@ -6,8 +6,20 @@ import { PresentesCell, type PresenteVista } from "./presentes-client";
 import { asignarResponsableAusente, justificarAusente, marcarContactoAusente, guardarVisitasTraidas } from "./actions";
 import { Top10Button, type TopItem } from "../../../presentation/components/top10-presencia-button";
 import { IndicadorChartHeader, type PuntoSerie } from "./indicador-chart-header";
+import { SelectorTrimestre } from "../../../presentation/components/selector-trimestre";
 
-export default async function RegistrosPage(): Promise<React.JSX.Element> {
+/** Normaliza un valor de search param a entero dentro de [min, max]; si no, devuelve null. */
+function paramEntero(valor: string | string[] | undefined, min: number, max: number): number | null {
+  const raw = Array.isArray(valor) ? valor[0] : valor;
+  const n = raw != null ? parseInt(raw, 10) : NaN;
+  return Number.isInteger(n) && n >= min && n <= max ? n : null;
+}
+
+export default async function RegistrosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}): Promise<React.JSX.Element> {
   const claims = await obtenerClaimsDeSesion();
 
   let contenido: React.JSX.Element;
@@ -25,7 +37,7 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
         : db.collection("registros_sabaticos").orderBy("creadoEn", "desc").limit(20);
 
     const snap = await registrosQuery.get();
-    const registros = snap.docs
+    const todosLosRegistros = snap.docs
       .map((d) => ({ id: d.id, ...d.data() }))
       .sort((a, b) => {
         const sabA = (a as Record<string, unknown>).sabadoEclesiastico as { anio?: number; numeroTrimestre?: number; numeroSabado?: number } | undefined;
@@ -34,6 +46,29 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
         const keyB = ((sabB?.anio ?? 0) * 10000) + ((sabB?.numeroTrimestre ?? 0) * 100) + (sabB?.numeroSabado ?? 0);
         return keyB - keyA;
       });
+
+    // Periodo elegido con el selector (?anio=&trimestre=). Por defecto: año
+    // actual y trimestre "Todos" (null), preservando el comportamiento previo.
+    const ahoraSel = new Date();
+    const anioActual = ahoraSel.getFullYear();
+    const sp = await searchParams;
+    // Años disponibles: los presentes en los registros, más el año actual.
+    const aniosEnRegistros = new Set<number>([anioActual]);
+    for (const r of todosLosRegistros) {
+      const sab = (r as Record<string, unknown>).sabadoEclesiastico as { anio?: number } | undefined;
+      if (typeof sab?.anio === "number") aniosEnRegistros.add(sab.anio);
+    }
+    const aniosDisponibles = Array.from(aniosEnRegistros).sort((a, b) => b - a);
+    const anio = paramEntero(sp.anio, anioActual - 20, anioActual + 1) ?? anioActual;
+    const trimestre = paramEntero(sp.trimestre, 1, 4); // null => Todos
+
+    // Filtrar por periodo: siempre por año; por trimestre solo si se eligió uno.
+    const registros = todosLosRegistros.filter((r) => {
+      const sab = (r as Record<string, unknown>).sabadoEclesiastico as { anio?: number; numeroTrimestre?: number } | undefined;
+      if (sab?.anio !== anio) return false;
+      if (trimestre !== null && sab?.numeroTrimestre !== trimestre) return false;
+      return true;
+    });
 
     // Cargar participantes del ámbito para: (a) resolver nombres de ausentes,
     // (b) ofrecer la lista de participantes activos como posibles responsables.
@@ -151,13 +186,18 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
     const top10Visitas = construirTop(visitasPorId);
     const top10Contactadores = construirTop(contactadosPorResponsableId);
 
-    // Cargar indicadores semanales
+    // Cargar indicadores semanales del periodo visible. Con trimestre elegido se
+    // usa ese; con "Todos", el trimestre más reciente entre los registros
+    // filtrados (o el actual como respaldo).
     const indicadores: Record<string, string> = {};
     if (esRolOperativo && claims.iglesiaId && claims.unidadId) {
-      const ahora = new Date();
-      const trimestre = Math.ceil((ahora.getMonth() + 1) / 3);
-      const anio = ahora.getFullYear();
-      const indicadorDocId = `${claims.iglesiaId}_${claims.unidadId}_${anio}_T${trimestre}_indicadores`;
+      let trimestreIndicadores = trimestre;
+      if (trimestreIndicadores === null) {
+        const primero = registros[0] as Record<string, unknown> | undefined;
+        const sab = primero?.sabadoEclesiastico as { numeroTrimestre?: number } | undefined;
+        trimestreIndicadores = sab?.numeroTrimestre ?? Math.ceil((new Date().getMonth() + 1) / 3);
+      }
+      const indicadorDocId = `${claims.iglesiaId}_${claims.unidadId}_${anio}_T${trimestreIndicadores}_indicadores`;
       const indicadorDoc = await db.collection("indicadores_semanales").doc(indicadorDocId).get();
       if (indicadorDoc.exists) {
         const data = indicadorDoc.data()!;
@@ -220,38 +260,46 @@ export default async function RegistrosPage(): Promise<React.JSX.Element> {
 
     contenido = (
       <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Registros Sabáticos</h1>
             <p className="mt-1 text-sm text-foreground/60">
               {nombreUnidad ? `Registros de ${nombreUnidad}` : "Registros de asistencia y estudio por sábado"}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Top10Button
-              top={top10Presencia}
-              color="amber"
-              botonLabel="🏆 Top 10 asistencia"
-              titulo="Top 10 asistencia"
-              descripcion="Participantes con más presencias registradas."
-              vacioLabel="Aún no hay presencias registradas."
+          <div className="flex flex-wrap items-end gap-3">
+            <SelectorTrimestre
+              anio={anio}
+              trimestre={trimestre}
+              anios={aniosDisponibles}
+              permitirTodos
             />
-            <Top10Button
-              top={top10Visitas}
-              color="sky"
-              botonLabel="👥 Top 10 visitas"
-              titulo="Top 10 visitas"
-              descripcion="Participantes que más visitas trajeron a la clase."
-              vacioLabel="Aún no hay visitas registradas."
-            />
-            <Top10Button
-              top={top10Contactadores}
-              color="sky"
-              botonLabel="📞 Top 10 contactadores"
-              titulo="Top 10 contactadores"
-              descripcion="Responsables que efectivamente contactaron a sus ausentes asignados."
-              vacioLabel="Aún no hay ausentes contactados."
-            />
+            <div className="flex items-center gap-2 shrink-0">
+              <Top10Button
+                top={top10Presencia}
+                color="amber"
+                botonLabel="🏆 Top 10 asistencia"
+                titulo="Top 10 asistencia"
+                descripcion="Participantes con más presencias registradas."
+                vacioLabel="Aún no hay presencias registradas."
+              />
+              <Top10Button
+                top={top10Visitas}
+                color="sky"
+                botonLabel="👥 Top 10 visitas"
+                titulo="Top 10 visitas"
+                descripcion="Participantes que más visitas trajeron a la clase."
+                vacioLabel="Aún no hay visitas registradas."
+              />
+              <Top10Button
+                top={top10Contactadores}
+                color="sky"
+                botonLabel="📞 Top 10 contactadores"
+                titulo="Top 10 contactadores"
+                descripcion="Responsables que efectivamente contactaron a sus ausentes asignados."
+                vacioLabel="Aún no hay ausentes contactados."
+              />
+            </div>
           </div>
         </div>
 
