@@ -72,6 +72,7 @@ export async function editarParticipante(formData: FormData) {
   const comentario = formData.get("comentario") as string;
   const fotoUrl = formData.get("fotoUrl") as string;
   const himnoFavorito = formData.get("himnoFavorito") as string;
+  const excluirAsistencia = formData.get("excluirAsistencia") === "true";
 
   if (!id || !nombre || !apellido || !genero) return;
 
@@ -90,6 +91,7 @@ export async function editarParticipante(formData: FormData) {
     comentario: comentario || null,
     fotoUrl: fotoUrl || null,
     himnoFavorito: himnoFavorito?.trim() || null,
+    excluir_asistencia: excluirAsistencia,
     actualizadoEn: new Date(),
   });
 

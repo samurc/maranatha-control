@@ -123,6 +123,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                         fotoUrl: p.fotoUrl as string | undefined,
                         himnoFavorito: p.himnoFavorito as string | undefined,
                         genero: p.genero as string | undefined,
+                        excluirAsistencia: p.excluir_asistencia as boolean | undefined,
                       }}
                       action={editarParticipante}
                       triggerClassName="flex items-center gap-3 text-left hover:text-blue-300 transition-colors"
@@ -142,10 +143,17 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                   </td>
                   <td className="px-4 py-3 text-foreground/70 text-xs">{(p.fechaNacimiento as string) ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
-                      }`}>
-                      {p.estado as string}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.estado === "activo" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"
+                        }`}>
+                        {p.estado as string}
+                      </span>
+                      {p.excluir_asistencia === true && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-500">
+                          📝 Ausencia justificada
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
@@ -215,6 +223,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                     fotoUrl: p.fotoUrl as string | undefined,
                     himnoFavorito: p.himnoFavorito as string | undefined,
                     genero: p.genero as string | undefined,
+                    excluirAsistencia: p.excluir_asistencia as boolean | undefined,
                   }}
                   action={editarParticipante}
                   triggerClassName="flex items-center gap-3 text-left"
@@ -239,6 +248,11 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                     }`}>
                     {p.estado as string}
                   </span>
+                  {p.excluir_asistencia === true && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-500">
+                      📝 Ausencia justificada
+                    </span>
+                  )}
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${p.esVisita ? "bg-blue-500/10 text-blue-400" : "bg-foreground/5 text-foreground/60"
                     }`}>
                     {p.esVisita ? "Visita" : "Miembro"}
@@ -275,6 +289,7 @@ export default async function ParticipantesPage(): Promise<React.JSX.Element> {
                     fotoUrl: p.fotoUrl as string | undefined,
                     himnoFavorito: p.himnoFavorito as string | undefined,
                     genero: p.genero as string | undefined,
+                    excluirAsistencia: p.excluir_asistencia as boolean | undefined,
                   }}
                   action={editarParticipante}
                 />

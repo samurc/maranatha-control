@@ -54,13 +54,16 @@ export default async function AsistenciaPage({
   }
 
   const participantesSnap = await participantesQuery.get();
-  const participantes = participantesSnap.docs.map((d) => ({
-    id: d.id,
-    nombre: d.data().nombre as string,
-    apellido: d.data().apellido as string,
-    fechaNacimiento: (d.data().fechaNacimiento as string) ?? "",
-    fotoUrl: d.data().fotoUrl as string | undefined,
-  }));
+  const participantes = participantesSnap.docs
+    // Excluir participantes marcados con excluir_asistencia (ausencia justificada).
+    .filter((d) => d.data().excluir_asistencia !== true)
+    .map((d) => ({
+      id: d.id,
+      nombre: d.data().nombre as string,
+      apellido: d.data().apellido as string,
+      fechaNacimiento: (d.data().fechaNacimiento as string) ?? "",
+      fotoUrl: d.data().fotoUrl as string | undefined,
+    }));
 
   // Obtener nombre de unidad e iglesia
   let nombreUnidad = "";

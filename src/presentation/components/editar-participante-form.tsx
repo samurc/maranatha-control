@@ -19,6 +19,7 @@ interface Participante {
   comentario?: string;
   fotoUrl?: string;
   himnoFavorito?: string;
+  excluirAsistencia?: boolean;
 }
 
 interface EditarParticipanteFormProps {
@@ -322,6 +323,19 @@ export function EditarParticipanteForm({ participante, action, trigger, triggerC
                 />
                 <label htmlFor="estado-activo" className="text-sm text-foreground/80">
                   Participante activo
+                </label>
+              </div>
+              <div className="md:col-span-2 flex items-center gap-3 rounded-lg border border-foreground/10 px-3.5 py-3">
+                <input
+                  type="checkbox"
+                  id="excluir-asistencia"
+                  name="excluirAsistencia"
+                  value="true"
+                  defaultChecked={participante.excluirAsistencia === true}
+                  className="h-4 w-4 rounded border-foreground/30 text-blue-600 focus:ring-blue-500/30"
+                />
+                <label htmlFor="excluir-asistencia" className="text-sm text-foreground/80">
+                  Excluir de asistencia
                 </label>
               </div>
             </div>
